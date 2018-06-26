@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Marshal where
 
+import Data.Bits
 import Data.ByteString (pack, singleton, ByteString)
 import Data.Binary (encode, Binary)
 import Data.Word
@@ -48,7 +49,7 @@ instance Marshable a => Marshable (PTuple a) where
 
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [
-    const (csingleton 'c'),
+    const (singleton $ 0x63 .|. 0x80),
     encLong . argCount,
     encLong . kwOnlyArgCount,
     encLong . nLocals,
@@ -65,3 +66,19 @@ instance Marshable CodeObject where
     encLong . firstLineNo,
     marshal . lnotab
     ])
+
+data PycFile = PycFile CodeObject
+
+instance Marshable PycFile where
+  marshal (PycFile co) = BS.concat [
+      pack [0x16, 0x0d, 0x0d, 0x0a]
+    , pack [0x80, 0x8c, 0x32, 0x5b]
+    , encLong 4
+    , marshalled
+    ]
+    where
+      size = BS.length marshalled
+      marshalled = marshal co
+
+writePycFile :: FilePath -> PycFile -> IO ()
+writePycFile fp pyc = BS.writeFile fp (marshal pyc)

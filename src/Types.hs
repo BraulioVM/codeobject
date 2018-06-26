@@ -12,7 +12,7 @@ data CodeObject = CodeObject {
   constants :: PTuple String,
   names :: PTuple String,
   varNames :: PTuple String,
-  filename :: PTuple String,
+  filename :: String,
   name :: String,
   firstLineNo :: Int,
   lnotab :: ByteString,
