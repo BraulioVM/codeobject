@@ -35,7 +35,9 @@ instance Marshable ByteString where
               s
 
 instance Marshable PExpr where
-  marshal None = csingleton 'N'
+  marshal PNone = csingleton 'N'
+  marshal (PInt x) = csingleton 'i' `BS.append`
+                     encLong x
 
 instance Marshable String where
   marshal s = csingleton 'a' `BS.append`

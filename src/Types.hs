@@ -23,4 +23,6 @@ data CodeObject = CodeObject {
 data PTuple a = PTuple [a]
 type CodeString = ByteString
 
-data PExpr = None
+data PExpr = PNone
+           | PInt Int
+

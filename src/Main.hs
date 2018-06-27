@@ -11,8 +11,13 @@ mainCodeObject = CodeObject {
   nLocals = 0,
   stackSize = 0,
   flags = 0x0040, 
-  codeString = getByteCode [LOAD_CONSTANT 0, RETURN_VALUE],
-  constants = PTuple [None],
+  codeString = getByteCode [
+      LOAD_CONSTANT 1,
+      LOAD_CONSTANT 2,
+      BINARY_ADD,
+      RETURN_VALUE
+      ],
+  constants = PTuple [PNone, PInt 3, PInt 4],
   names = PTuple [],
   varNames = PTuple [],
   filename = "mod.py",

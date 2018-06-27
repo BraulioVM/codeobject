@@ -25,7 +25,7 @@ opByteCode (STORE_FAST n) = pack [125, byte2, byte1]
   where
     [byte1, byte2] = encodeWord16 n
 
-opByteCode (LOAD_CONSTANT n) = pack [100, byte2, byte1]
+opByteCode (LOAD_CONSTANT n) = pack [100, byte1, byte2]
   where
     [byte1, byte2] = encodeWord16 n
 
