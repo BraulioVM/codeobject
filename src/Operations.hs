@@ -10,6 +10,7 @@ data Operation = BINARY_ADD
                | LOAD_FAST Word16
                | STORE_FAST Word16
                | LOAD_CONSTANT Word16
+               | PRINT_EXPR
                | RETURN_VALUE
   
 getByteCode :: [Operation] -> ByteString
@@ -30,7 +31,7 @@ opByteCode (LOAD_CONSTANT n) = pack [100, byte1, byte2]
     [byte1, byte2] = encodeWord16 n
 
 opByteCode RETURN_VALUE = singleton 83
-
+opByteCode PRINT_EXPR = singleton 70
 
 
 encodeWord16 :: Word16 -> [Word8]
