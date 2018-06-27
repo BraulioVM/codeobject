@@ -12,13 +12,13 @@ mainCodeObject = CodeObject {
   stackSize = 0,
   flags = 0x0040, 
   codeString = getByteCode [],
-  constants = PTuple [],
+  constants = PTuple [None],
   names = PTuple [],
   varNames = PTuple [],
   filename = "mod.py",
   name = "",
   firstLineNo = 0,
-  lnotab = getByteCode [BINARY_ADD],
+  lnotab = getByteCode [],
   freeVars = PTuple [],
   cellVars = PTuple []
   }

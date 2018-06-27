@@ -9,7 +9,7 @@ data CodeObject = CodeObject {
   stackSize :: Int,
   flags :: Int,
   codeString :: CodeString,
-  constants :: PTuple String,
+  constants :: PTuple PExpr,
   names :: PTuple String,
   varNames :: PTuple String,
   filename :: String,
@@ -23,4 +23,4 @@ data CodeObject = CodeObject {
 data PTuple a = PTuple [a]
 type CodeString = ByteString
 
-
+data PExpr = None

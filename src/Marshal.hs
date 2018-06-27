@@ -34,6 +34,9 @@ instance Marshable ByteString where
               encLong (BS.length s) `BS.append`
               s
 
+instance Marshable PExpr where
+  marshal None = csingleton 'N'
+
 instance Marshable String where
   marshal s = csingleton 's' `BS.append`
               encLong (length s) `BS.append`
@@ -41,8 +44,8 @@ instance Marshable String where
 
 instance Marshable a => Marshable (PTuple a) where
   marshal (PTuple as) = 
-    csingleton ')' `BS.append`
-        encLong n `BS.append`
+    csingleton '(' `BS.append` -- long tuple uses int for size
+        encLong n `BS.append`  -- small tuple uses just one byte
         BS.concat (marshal <$> as)
     where
       n = length as
@@ -71,14 +74,11 @@ data PycFile = PycFile CodeObject
 
 instance Marshable PycFile where
   marshal (PycFile co) = BS.concat [
-      pack [0x16, 0x0d, 0x0d, 0x0a]
-    , pack [0x80, 0x8c, 0x32, 0x5b]
-    , encLong 4
-    , marshalled
+      pack [0x16, 0x0d, 0x0d, 0x0a] -- magic number python35
+    , encLong 0x5b337342 -- timestamp
+    , encLong 0 -- source size
+    , marshal co
     ]
-    where
-      size = BS.length marshalled
-      marshalled = marshal co
 
 writePycFile :: FilePath -> PycFile -> IO ()
 writePycFile fp pyc = BS.writeFile fp (marshal pyc)
