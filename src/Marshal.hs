@@ -38,7 +38,7 @@ instance Marshable PExpr where
   marshal None = csingleton 'N'
 
 instance Marshable String where
-  marshal s = csingleton 's' `BS.append`
+  marshal s = csingleton 'a' `BS.append`
               encLong (length s) `BS.append`
               (BSC.pack s)
 

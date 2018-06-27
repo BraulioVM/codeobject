@@ -9,6 +9,7 @@ data Operation = BINARY_ADD
                | BINARY_MULTIPLY
                | LOAD_FAST Word16
                | STORE_FAST Word16
+               | LOAD_CONSTANT Word16
                | RETURN_VALUE
   
 getByteCode :: [Operation] -> ByteString
@@ -23,7 +24,14 @@ opByteCode (LOAD_FAST n) = pack [124, byte2, byte1]
 opByteCode (STORE_FAST n) = pack [125, byte2, byte1]
   where
     [byte1, byte2] = encodeWord16 n
+
+opByteCode (LOAD_CONSTANT n) = pack [100, byte2, byte1]
+  where
+    [byte1, byte2] = encodeWord16 n
+
 opByteCode RETURN_VALUE = singleton 83
+
+
 
 encodeWord16 :: Word16 -> [Word8]
 encodeWord16 x = map fromIntegral [
