@@ -72,12 +72,13 @@ instance Marshable CodeObject where
     marshal . lnotab
     ])
 
-data PycFile = PycFile CodeObject
+type Timestamp = Int
+data PycFile = PycFile Timestamp CodeObject
 
 instance Marshable PycFile where
-  marshal (PycFile co) = BS.concat [
+  marshal (PycFile ts co) = BS.concat [
       pack [0x16, 0x0d, 0x0d, 0x0a] -- magic number python35
-    , encLong 0x5b337342 -- timestamp
+    , encLong ts -- timestamp
     , encLong 0 -- source size
     , marshal co
     ]

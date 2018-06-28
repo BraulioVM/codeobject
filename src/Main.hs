@@ -31,7 +31,7 @@ mainCodeObject = CodeObject {
   }
 
 file :: PycFile
-file = PycFile mainCodeObject
+file = PycFile 0x5b337342 mainCodeObject
 
 main :: IO ()
 main = do
