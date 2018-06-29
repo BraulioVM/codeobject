@@ -9,6 +9,7 @@ import Data.ByteString (ByteString)
 import System.IO hiding (withFile)
 import System.Directory
 import System.FilePath
+import System.Process
 import Test.HUnit
 import Operations
 import Types
@@ -42,22 +43,26 @@ testFile = (testDirectory </>)
 withCreatePythonFiles :: String -> CodeObject -> IO () -> IO ()
 withCreatePythonFiles modName co action = do
   withFile modFilename "" $ do
-    withDirectory pycache $ do
-      -- construct a PycFile
-      modifTime <- getModificationTime modFilename
-      let (posixTime :: POSIXTime) = utcTimeToPOSIXSeconds modifTime
-          pycFile = PycFile (floor posixTime) co
+    withFile importer "import mod" $ do
+      withDirectory pycache $ do
+        -- construct a PycFile
+        modifTime <- getModificationTime modFilename
+        let (posixTime :: POSIXTime) = utcTimeToPOSIXSeconds modifTime
+            pycFile = PycFile (floor posixTime) co
 
-      withBFile pycFilename (marshal pycFile) action
+        withBFile pycFilename (marshal pycFile) action
       
   where
     modFilename = testFile $ modName ++ ".py"
+    importer = testFile "importer.py"
     pycache = testFile "__pycache__"
     pycFilename = pycache </> modName ++ ".cpython-35.pyc"
 
-createAndImport :: CodeObject -> IO ()
-createAndImport co = do
+createAndImport :: CodeObject -> (String -> IO ()) -> IO ()
+createAndImport co action = do
   withCreatePythonFiles "mod" co $ do
+    output <- readProcess "python3" [testFile "importer.py"] "" 
+    action output
     return ()
 
 codeobject :: CodeObject
@@ -88,7 +93,8 @@ codeobject = CodeObject {
 
 
 test1 = TestCase $ do
-  createAndImport codeobject
+  createAndImport codeobject $ \output ->
+    assertEqual "Python output" output "7\n"
 
 tests = TestList [TestLabel "hey" test1]
 
