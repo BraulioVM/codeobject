@@ -65,13 +65,23 @@ createAndImport co action = do
     action output
     return ()
 
-codeobject :: CodeObject
-codeobject = CodeObject {
-  argCount = 0,
-  kwOnlyArgCount = 0,
-  nLocals = 0,
-  stackSize = 0,
-  flags = 0x0040, 
+loadConstantObject :: CodeObject
+loadConstantObject = basicObject {
+  codeString = getByteCode [
+      LOAD_CONSTANT 1,
+      PRINT_EXPR,
+      LOAD_CONSTANT 0,
+      RETURN_VALUE
+      ],
+   constants = PTuple [PNone, PInt 3]
+}
+
+
+test1 = TestCase $ do
+  createAndImport loadConstantObject $ \output ->
+    assertEqual "Python output" output "3\n"
+
+binaryAddObject = basicObject {
   codeString = getByteCode [
       LOAD_CONSTANT 1,
       LOAD_CONSTANT 2,
@@ -80,23 +90,17 @@ codeobject = CodeObject {
       LOAD_CONSTANT 0,
       RETURN_VALUE
       ],
-  constants = PTuple [PNone, PInt 3, PInt 4],
-  names = PTuple [],
-  varNames = PTuple [],
-  filename = "",
-  name = "",
-  firstLineNo = 1,
-  lnotab = getByteCode [],
-  freeVars = PTuple [],
-  cellVars = PTuple []
+    constants = PTuple [PNone, PInt 5, PInt 6]
   }
 
+test2 = TestCase $ do
+  createAndImport binaryAddObject $ \output ->
+    assertEqual "Python output" output "11\n"
 
-test1 = TestCase $ do
-  createAndImport codeobject $ \output ->
-    assertEqual "Python output" output "7\n"
-
-tests = TestList [TestLabel "hey" test1]
+tests = TestList [
+  TestLabel "basic .pyc making" test1,
+  TestLabel "binary_add object" test2
+  ]
 
 main = do
   withDirectory testDirectory (const () <$> runTestTT tests)
