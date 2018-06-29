@@ -101,8 +101,8 @@ localVarNames = basicObject {
   nLocals = 1,
   codeString = getByteCode [
       LOAD_CONSTANT 1,
-      STORE_FAST 0,
-      LOAD_FAST 0,
+      STORE_FAST 1,
+      LOAD_FAST 1,
       PRINT_EXPR,
       LOAD_CONSTANT 0,
       RETURN_VALUE

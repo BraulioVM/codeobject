@@ -19,10 +19,10 @@ getByteCode = BS.concat . fmap opByteCode
 opByteCode :: Operation -> ByteString
 opByteCode BINARY_ADD = singleton 23
 opByteCode BINARY_MULTIPLY = singleton 20
-opByteCode (LOAD_FAST n) = pack [124, byte2, byte1]
+opByteCode (LOAD_FAST n) = pack [124, byte1, byte2]
   where
     [byte1, byte2] = encodeWord16 n
-opByteCode (STORE_FAST n) = pack [125, byte2, byte1]
+opByteCode (STORE_FAST n) = pack [125, byte1, byte2]
   where
     [byte1, byte2] = encodeWord16 n
 
