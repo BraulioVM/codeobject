@@ -97,9 +97,28 @@ test2 = TestCase $ do
   createAndImport binaryAddObject $ \output ->
     assertEqual "Python output" output "11\n"
 
+localVarNames = basicObject {
+  nLocals = 1,
+  codeString = getByteCode [
+      LOAD_CONSTANT 1,
+      STORE_FAST 0,
+      LOAD_FAST 0,
+      PRINT_EXPR,
+      LOAD_CONSTANT 0,
+      RETURN_VALUE
+      ],
+    constants = PTuple [PNone, PInt 4]
+  }
+
+test3 = TestCase $ do
+  createAndImport localVarNames $ \output ->
+    assertEqual "Python output" output "4\n"
+
+
 tests = TestList [
   TestLabel "basic .pyc making" test1,
-  TestLabel "binary_add object" test2
+  TestLabel "binary_add object" test2,
+  TestLabel "store_fast and load_fast" test3
   ]
 
 main = do
