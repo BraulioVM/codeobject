@@ -11,77 +11,83 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BL
 import Types
 
-class Marshable m where
-  marshal :: m -> ByteString
+-- | Basic encoding functions
 
+-- | Encode a single character
 csingleton :: Char -> ByteString
 csingleton = BSC.singleton
 
-enc :: (Binary a) => a -> ByteString
-enc = BS.concat . BL.toChunks . encode
+-- | Little endian encoding of an integer
+encInt :: Int -> ByteString
+encInt = enc . byteSwap32 . fromIntegral 
+  where
+    enc :: (Binary a) => a -> ByteString
+    enc = BS.concat . BL.toChunks . encode
 
-encLong :: Int -> ByteString
-encLong = enc . byteSwap32 . fromIntegral 
-
-instance Marshable Int where
-  marshal x = BS.concat [
-    csingleton 'i',
-    enc x
-    ]
+-- | Objects that can be serialized using
+-- python's marshal format
+class Marshable m where
+  marshal :: m -> ByteString
 
 instance Marshable ByteString where
   marshal s = csingleton 's' `BS.append`
-              encLong (BS.length s) `BS.append`
+              encInt (BS.length s) `BS.append`
               s
 
-instance Marshable PExpr where
-  marshal PNone = csingleton 'N'
-  marshal (PInt x) = csingleton 'i' `BS.append`
-                     encLong x
+instance Marshable PyExpr where
+  marshal PyNone = csingleton 'N'
+  marshal (PyInt x) = csingleton 'i' `BS.append`
+                     encInt x
+  marshal (PyString s) = csingleton 'a' `BS.append`
+                         encInt (length s) `BS.append`
+                         (BSC.pack s)
 
-instance Marshable String where
-  marshal s = csingleton 'a' `BS.append`
-              encLong (length s) `BS.append`
-              (BSC.pack s)
-
-instance Marshable a => Marshable (PTuple a) where
-  marshal (PTuple as) = 
-    csingleton '(' `BS.append` -- long tuple uses int for size
-        encLong n `BS.append`  -- small tuple uses just one byte
-        BS.concat (marshal <$> as)
+  marshal (PyTuple exprs) = csingleton '(' `BS.append`
+                               encInt n `BS.append`  
+                               BS.concat (marshal <$> exprs)
     where
-      n = length as
+      n = length exprs
 
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [
     const (singleton $ 0x63 .|. 0x80),
-    encLong . argCount,
-    encLong . kwOnlyArgCount,
-    encLong . nLocals,
-    encLong . stackSize,
-    encLong . flags,
+    encInt . argCount,
+    encInt . kwOnlyArgCount,
+    encInt . nLocals,
+    encInt . stackSize,
+    encInt . flags,
     marshal . codeString,
-    marshal . constants,
-    marshal . names,
-    marshal . varNames,
-    marshal . freeVars,
-    marshal . cellVars,
-    marshal . filename,
-    marshal . name,
-    encLong . firstLineNo,
+    marshal . toPyExpr . constants,
+    marshal . toPyExpr . names,
+    marshal . toPyExpr . varNames,
+    marshal . toPyExpr . freeVars,
+    marshal . toPyExpr . cellVars,
+    marshal . toPyExpr . filename,
+    marshal . toPyExpr . name,
+    encInt . firstLineNo,
     marshal . lnotab
     ])
 
+-- | Unix timestamp
 type Timestamp = Int
+
+-- | Represents a pyc file
 data PycFile = PycFile Timestamp CodeObject
 
 instance Marshable PycFile where
-  marshal (PycFile ts co) = BS.concat [
-      pack [0x16, 0x0d, 0x0d, 0x0a] -- magic number python35
-    , encLong ts -- timestamp
-    , encLong 0 -- source size
-    , marshal co
+  marshal (PycFile timestamp codeObject) = BS.concat
+    [ python35MagicNumber
+    , encInt timestamp
+    , encInt 0 -- source size
+    , marshal codeObject
     ]
+   where
+     -- | .pyc file magic number used by
+     -- python3.5
+     python35MagicNumber :: ByteString
+     python35MagicNumber = pack [0x16, 0x0d, 0x0d, 0x0a]
+
+
 
 writePycFile :: FilePath -> PycFile -> IO ()
 writePycFile fp pyc = BS.writeFile fp (marshal pyc)

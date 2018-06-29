@@ -66,14 +66,14 @@ createAndImport co action = do
     return ()
 
 loadConstantObject :: CodeObject
-loadConstantObject = basicObject {
+loadConstantObject = defaultObject {
   codeString = getByteCode [
       LOAD_CONSTANT 1,
       PRINT_EXPR,
       LOAD_CONSTANT 0,
       RETURN_VALUE
       ],
-   constants = PTuple [PNone, PInt 3]
+   constants = PTuple [PyNone, PyInt 3]
 }
 
 
@@ -81,7 +81,7 @@ test1 = TestCase $ do
   createAndImport loadConstantObject $ \output ->
     assertEqual "Python output" output "3\n"
 
-binaryAddObject = basicObject {
+binaryAddObject = defaultObject {
   codeString = getByteCode [
       LOAD_CONSTANT 1,
       LOAD_CONSTANT 2,
@@ -90,14 +90,14 @@ binaryAddObject = basicObject {
       LOAD_CONSTANT 0,
       RETURN_VALUE
       ],
-    constants = PTuple [PNone, PInt 5, PInt 6]
+    constants = PTuple [PyNone, PyInt 5, PyInt 6]
   }
 
 test2 = TestCase $ do
   createAndImport binaryAddObject $ \output ->
     assertEqual "Python output" output "11\n"
 
-localVarNames = basicObject {
+localVarNames = defaultObject {
   nLocals = 1,
   codeString = getByteCode [
       LOAD_CONSTANT 1,
@@ -107,7 +107,7 @@ localVarNames = basicObject {
       LOAD_CONSTANT 0,
       RETURN_VALUE
       ],
-    constants = PTuple [PNone, PInt 4]
+    constants = PTuple [PyNone, PyInt 4]
   }
 
 test3 = TestCase $ do

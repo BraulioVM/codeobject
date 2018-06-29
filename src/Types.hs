@@ -1,34 +1,69 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Types where
 
 import Data.ByteString
 import Operations
 
-data CodeObject = CodeObject {
-  argCount :: Int,
-  kwOnlyArgCount :: Int,
-  nLocals :: Int,
-  stackSize :: Int,
-  flags :: Int,
-  codeString :: CodeString,
-  constants :: PTuple PExpr,
-  names :: PTuple String,
-  varNames :: PTuple String,
-  filename :: String,
-  name :: String,
-  firstLineNo :: Int,
-  lnotab :: ByteString,
-  freeVars :: PTuple String,
-  cellVars :: PTuple String
-  }
+-- | Represents data that will be
+-- marshalled as a python tuple.
+newtype PTuple a = PTuple [a]
 
-data PTuple a = PTuple [a]
+unPTuple :: PTuple a -> [a]
+unPTuple (PTuple as) = as
+
 type CodeString = ByteString
 
-data PExpr = PNone
-           | PInt Int
+-- | Represents python expressions
+data PyExpr = PyNone -- ^ None value
+            | PyInt Int -- ^ A python integer (fixed-size)
+            | PyString String -- ^ A python string
+            | PyTuple [PyExpr] -- ^ A python tuple
+            | PyList [PyExpr] -- ^ A python list
 
-basicObject :: CodeObject
-basicObject = CodeObject {
+class ToPyExpr a where
+  toPyExpr :: a -> PyExpr
+
+instance ToPyExpr PyExpr where
+  toPyExpr = id
+
+instance ToPyExpr Int where
+  toPyExpr = PyInt
+
+instance ToPyExpr String where
+  toPyExpr = PyString
+
+instance ToPyExpr a => ToPyExpr (PTuple a) where
+  toPyExpr = PyTuple . Prelude.map toPyExpr . unPTuple
+
+-- | Python code object
+data CodeObject = CodeObject
+  { argCount :: Int -- ^  Arguments of the function (not including
+                    -- *args and **kwargs)
+  , kwOnlyArgCount :: Int -- ^ Number of keyword-only arguments
+  , nLocals :: Int  -- ^ Number of local variables
+  , stackSize :: Int -- ^ Stack size required for the function
+  , flags :: Int -- ^ Interpreter flags
+  , codeString :: CodeString -- ^ Function's bytecode
+  , constants :: PTuple PyExpr -- ^ Tuple containing the constants
+                              -- used during the execution of the function
+  , names :: PTuple String -- ^ Global variable's names used during
+                           -- the execution of the function.
+  , varNames :: PTuple String -- ^ Local variable's names.
+  , filename :: String -- ^ Source filename containing the code
+  , name :: String -- ^ The function's name
+  , firstLineNo :: Int -- ^ First source file line where the function
+                       -- is implemented.
+  , lnotab :: ByteString -- ^ Maps source lines to bytecode instructions
+                         -- (don't know how).
+  , freeVars :: PTuple String -- ^ Variables used in the function
+                              -- that are neither local nor global 
+  , cellVars :: PTuple String  -- ^ Local variables used by inner functions
+  }
+
+
+
+defaultObject :: CodeObject
+defaultObject = CodeObject {
   argCount = 0,
   kwOnlyArgCount = 0,
   nLocals = 0,
