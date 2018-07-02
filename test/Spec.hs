@@ -8,6 +8,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import System.IO hiding (withFile)
 import System.Directory
+import System.Exit
 import System.FilePath
 import System.Process
 import Test.HUnit
@@ -71,9 +72,15 @@ withCreatePythonFiles modName co action = do
 createAndImport :: CodeObject -> (String -> IO ()) -> IO ()
 createAndImport co action = do
   withCreatePythonFiles "mod" co $ do
-    output <- readProcess "python3" [testFile "importer.py"] "" 
-    action output
-    return ()
+    (exitCode, output, stderr) <- runPython
+    case exitCode of
+      ExitSuccess ->  action output
+      ExitFailure errorCode -> assertFailure $ "Python error " ++
+        show errorCode ++ ": " ++ output ++ stderr
+      where
+        args = [testFile "importer.py"]
+        stdin = ""
+        runPython = readProcessWithExitCode "python3" args stdin
 
 loadConstantObject :: CodeObject
 loadConstantObject = defaultObject {
@@ -124,11 +131,10 @@ test3 = TestCase $ do
   createAndImport localVarNames $ \output ->
     assertEqual "Python output" output "4\n"
 
-
-tests = TestList [
-  TestLabel "basic .pyc making" test1,
-  TestLabel "binary_add object" test2,
-  TestLabel "store_fast and load_fast" test3
+tests = TestList
+  [ TestLabel "basic .pyc making" test1
+  , TestLabel "binary_add object" test2
+  , TestLabel "store_fast and load_fast" test3
   ]
 
 main = do
