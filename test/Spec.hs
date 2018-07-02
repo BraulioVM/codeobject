@@ -29,7 +29,7 @@ withFile fp content action = do
   removeFile filename
     where
       filename = testFile fp
-    
+
 
 withBFile :: FilePath -> ByteString -> IO () -> IO ()
 withBFile fp content action = do

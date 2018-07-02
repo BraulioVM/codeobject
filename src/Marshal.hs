@@ -50,7 +50,7 @@ instance Marshable PyExpr where
 
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [
-    const (singleton $ 0x63 .|. 0x80),
+    const (csingleton 'c'),
     encInt . argCount,
     encInt . kwOnlyArgCount,
     encInt . nLocals,
