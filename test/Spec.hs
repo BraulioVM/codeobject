@@ -143,12 +143,15 @@ useStrings = defaultObject
       LOAD_CONSTANT 0,
       RETURN_VALUE
     ]
-  , constants = PTuple [PyNone, PyString "hey", PyString "ho"]
+  , constants = PTuple [ PyNone
+                       , PyString "hñɊey" -- unicode strings
+                       , PyString "ho"
+                       ]
   }
 
 testStrings = TestCase $ do
   createAndImport useStrings $ \output ->
-    assertEqual "Python output" output "'heyho'\n"
+    assertEqual "Python output" output "'hñɊeyho'\n"
 
 jumpForward :: CodeObject
 jumpForward = defaultObject

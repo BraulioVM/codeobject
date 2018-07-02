@@ -4,6 +4,7 @@ module Marshal where
 
 import Data.Bits
 import Data.ByteString (pack, singleton, ByteString)
+import Data.ByteString.UTF8 (fromString)
 import Data.Binary (encode, Binary)
 import Data.Word
 import qualified Data.ByteString as BS
@@ -38,9 +39,12 @@ instance Marshable PyExpr where
   marshal PyNone = csingleton 'N'
   marshal (PyInt x) = csingleton 'i' `BS.append`
                      encInt x
-  marshal (PyString s) = csingleton 'a' `BS.append`
-                         encInt (length s) `BS.append`
-                         (BSC.pack s)
+  marshal (PyString s) = csingleton 'u' `BS.append`
+                         encInt size `BS.append`
+                         payload
+    where
+      payload = fromString s
+      size = BS.length payload
 
   marshal (PyBool True) = csingleton 'T'
   marshal (PyBool False) = csingleton 'F'

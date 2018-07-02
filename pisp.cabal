@@ -21,7 +21,8 @@ library
                        Marshal
   build-depends:       base,
                        bytestring,
-                       binary
+                       binary,
+                       utf8-string
 Test-Suite test
   type:                exitcode-stdio-1.0
   main-is:             test/Spec.hs
