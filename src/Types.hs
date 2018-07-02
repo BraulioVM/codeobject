@@ -61,7 +61,7 @@ data CodeObject = CodeObject
   }
 
 
-
+-- | A good value to build simple code objects from
 defaultObject :: CodeObject
 defaultObject = CodeObject {
   argCount = 0,
