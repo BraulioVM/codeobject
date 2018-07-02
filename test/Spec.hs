@@ -94,7 +94,7 @@ loadConstantObject = defaultObject {
 }
 
 
-test1 = TestCase $ do
+testBasic = TestCase $ do
   createAndImport loadConstantObject $ \output ->
     assertEqual "Python output" output "3\n"
 
@@ -110,7 +110,7 @@ binaryAddObject = defaultObject {
     constants = PTuple [PyNone, PyInt 5, PyInt 6]
   }
 
-test2 = TestCase $ do
+testIntegerAdd = TestCase $ do
   createAndImport binaryAddObject $ \output ->
     assertEqual "Python output" output "11\n"
 
@@ -127,7 +127,7 @@ localVarNames = defaultObject {
     constants = PTuple [PyNone, PyInt 4]
   }
 
-test3 = TestCase $ do
+testLocalVars = TestCase $ do
   createAndImport localVarNames $ \output ->
     assertEqual "Python output" output "4\n"
 
@@ -151,9 +151,9 @@ testStrings = TestCase $ do
     assertEqual "Python output" output "'heyho'\n"
 
 tests = TestList
-  [ TestLabel "basic .pyc making" test1
-  , TestLabel "binary_add object" test2
-  , TestLabel "store_fast and load_fast" test3
+  [ TestLabel "basic .pyc making" testBasic
+  , TestLabel "binary_add object" testIntegerAdd
+  , TestLabel "store_fast and load_fast" testLocalVars
   , TestLabel "load strings" testStrings
   ]
 
