@@ -44,13 +44,21 @@ instance Marshable PyExpr where
 
   marshal (PyBool True) = csingleton 'T'
   marshal (PyBool False) = csingleton 'F'
-  marshal (PyTuple exprs) = csingleton '(' `BS.append`
-                               encInt n `BS.append`  
-                               BS.concat (marshal <$> exprs)
+  marshal (PyTuple exprs) = case smallSize of
+    Just small -> csingleton ')' `BS.append`
+                  singleton small `BS.append`
+                  items
+    Nothing -> csingleton '(' `BS.append`
+               encInt size `BS.append`  
+               items
     where
-      n = length exprs
+      size = length exprs
+      smallSize :: Maybe Word8
+      smallSize = if (0 <= size && size < 256)
+                  then Just (fromIntegral size)
+                  else Nothing
 
-
+      items = BS.concat (marshal <$> exprs)
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [
     const (csingleton 'c'),
