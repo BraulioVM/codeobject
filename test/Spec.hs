@@ -150,11 +150,29 @@ testStrings = TestCase $ do
   createAndImport useStrings $ \output ->
     assertEqual "Python output" output "'heyho'\n"
 
+jumpForward :: CodeObject
+jumpForward = defaultObject
+  { codeString = getByteCode
+                 [ LOAD_CONSTANT 1
+                 , JUMP_FORWARD 3 -- LOAD_CONSTANT uses 3 bytes
+                 , LOAD_CONSTANT 2
+                 , PRINT_EXPR
+                 , LOAD_CONSTANT 0
+                 , RETURN_VALUE
+                 ]
+  , constants = PTuple [PyNone, PyInt 13, PyInt 41]
+  }
+
+testJumpForward = TestCase $ do
+  createAndImport jumpForward $ \output ->
+    assertEqual "Python output" output "13\n"
+
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
   , TestLabel "binary_add object" testIntegerAdd
   , TestLabel "store_fast and load_fast" testLocalVars
   , TestLabel "load strings" testStrings
+  , TestLabel "jumps forward" testJumpForward
   ]
 
 main = do
