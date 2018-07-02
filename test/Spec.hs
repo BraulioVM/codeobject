@@ -167,12 +167,48 @@ testJumpForward = TestCase $ do
   createAndImport jumpForward $ \output ->
     assertEqual "Python output" output "13\n"
 
+testJumpIfBoolean = TestCase $ do
+  createAndImport jumpIfBoolean $ \output ->
+    assertEqual "Python output" output "100\n100\n"
+
+  where
+    jumpIfBoolean :: CodeObject
+    jumpIfBoolean = defaultObject
+      { codeString = getByteCode
+                     [ LOAD_CONSTANT 3 -- 100 | 0 
+                     , LOAD_CONSTANT 1 -- True | 3
+                     , POP_JUMP_IF_TRUE 12 -- x | 6
+                     , LOAD_CONSTANT 4 -- 200 | 9
+                     , PRINT_EXPR -- prints 100 | 12
+                     , LOAD_CONSTANT 2 -- False | 15
+                     , POP_JUMP_IF_TRUE 10000 -- would crash
+                     , LOAD_CONSTANT 3 -- 100 | 19
+                     , LOAD_CONSTANT 2 -- False | 22
+                     , POP_JUMP_IF_FALSE 31 -- x | 25
+                     , LOAD_CONSTANT 4 -- 200 | 28
+                     , PRINT_EXPR -- prints 100 | 31
+                     , LOAD_CONSTANT 1 -- True | 32
+                     , POP_JUMP_IF_FALSE 41 -- x | 35
+                     , JUMP_FORWARD 1  -- 1 | 38
+                     , PRINT_EXPR -- won't execute | 41
+                     , LOAD_CONSTANT 0 -- | 42
+                     , RETURN_VALUE -- | 45
+                     ]
+      , constants = PTuple [ PyNone
+                           , PyBool True
+                           , PyBool False
+                           , PyInt 100
+                           , PyInt 200
+                           ]
+      }
+
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
   , TestLabel "binary_add object" testIntegerAdd
   , TestLabel "store_fast and load_fast" testLocalVars
   , TestLabel "load strings" testStrings
   , TestLabel "jumps forward" testJumpForward
+  , TestLabel "boolean jumps" testJumpIfBoolean
   ]
 
 main = do

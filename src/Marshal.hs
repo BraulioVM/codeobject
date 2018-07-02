@@ -42,11 +42,14 @@ instance Marshable PyExpr where
                          encInt (length s) `BS.append`
                          (BSC.pack s)
 
+  marshal (PyBool True) = csingleton 'T'
+  marshal (PyBool False) = csingleton 'F'
   marshal (PyTuple exprs) = csingleton '(' `BS.append`
                                encInt n `BS.append`  
                                BS.concat (marshal <$> exprs)
     where
       n = length exprs
+
 
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [

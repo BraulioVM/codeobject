@@ -17,6 +17,7 @@ type CodeString = ByteString
 data PyExpr = PyNone -- ^ None value
             | PyInt Int -- ^ A python integer (fixed-size)
             | PyString String -- ^ A python string
+            | PyBool Bool -- ^ A python boolean
             | PyTuple [PyExpr] -- ^ A python tuple
             | PyList [PyExpr] -- ^ A python list
 
@@ -31,6 +32,9 @@ instance ToPyExpr Int where
 
 instance ToPyExpr String where
   toPyExpr = PyString
+
+instance ToPyExpr Bool where
+  toPyExpr = PyBool
 
 instance ToPyExpr a => ToPyExpr (PTuple a) where
   toPyExpr = PyTuple . Prelude.map toPyExpr . unPTuple

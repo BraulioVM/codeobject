@@ -14,6 +14,8 @@ data Operation = BINARY_ADD
                | PRINT_EXPR
                | RETURN_VALUE
                | JUMP_FORWARD Word16
+               | POP_JUMP_IF_TRUE Word16
+               | POP_JUMP_IF_FALSE Word16
   
 -- | Turn a string of bytecode instructions
 -- into the associated bytestring
@@ -37,6 +39,8 @@ opByteCode RETURN_VALUE = singleton 83
 opByteCode PRINT_EXPR = singleton 70
 
 opByteCode (JUMP_FORWARD n) = opWithArgument 110 n
+opByteCode (POP_JUMP_IF_TRUE n) = opWithArgument 115 n
+opByteCode (POP_JUMP_IF_FALSE n) = opWithArgument 114 n
 
 opWithArgument :: Word8 -> Word16 -> ByteString
 opWithArgument op n = pack [op, lsb, msb]
