@@ -15,30 +15,40 @@ import Operations
 import Types
 import Marshal
 
-withFile :: FilePath -> String -> IO () -> IO ()
-withFile fp content action = do
-  writeFile fp content
-  action
-  removeFile fp
-
-withBFile :: FilePath -> ByteString -> IO () -> IO ()
-withBFile fp content action = do
-  BS.writeFile fp content
-  action
-  removeFile fp
-
-withDirectory :: FilePath -> IO () -> IO ()
-withDirectory fp action = do
-  exists <- doesDirectoryExist fp
-  unless exists (createDirectory fp)
-  action
-  removeDirectory fp
-
 testDirectory :: FilePath
 testDirectory = "test" </> "testfiles"
 
 testFile :: FilePath -> FilePath
 testFile = (testDirectory </>)
+
+withFile :: FilePath -> String -> IO () -> IO ()
+withFile fp content action = do
+  writeFile filename content
+  action
+  removeFile filename
+    where
+      filename = testFile fp
+    
+
+withBFile :: FilePath -> ByteString -> IO () -> IO ()
+withBFile fp content action = do
+  BS.writeFile filename content
+  action
+  removeFile filename
+    where
+      filename = testFile fp
+
+withDirectory :: FilePath -> IO () -> IO ()
+withDirectory fp action = do
+  exists <- doesDirectoryExist path
+  unless exists (createDirectory path)
+  action
+  removeDirectory path
+    where
+      path = testFile fp
+
+getModifTime :: FilePath -> IO UTCTime
+getModifTime = getModificationTime . testFile
 
 withCreatePythonFiles :: String -> CodeObject -> IO () -> IO ()
 withCreatePythonFiles modName co action = do
@@ -46,16 +56,16 @@ withCreatePythonFiles modName co action = do
     withFile importer "import mod" $ do
       withDirectory pycache $ do
         -- construct a PycFile
-        modifTime <- getModificationTime modFilename
+        modifTime <- getModifTime modFilename
         let (posixTime :: POSIXTime) = utcTimeToPOSIXSeconds modifTime
             pycFile = PycFile (floor posixTime) co
 
         withBFile pycFilename (marshal pycFile) action
       
   where
-    modFilename = testFile $ modName ++ ".py"
-    importer = testFile "importer.py"
-    pycache = testFile "__pycache__"
+    modFilename = modName ++ ".py"
+    importer = "importer.py"
+    pycache =  "__pycache__"
     pycFilename = pycache </> modName ++ ".cpython-35.pyc"
 
 createAndImport :: CodeObject -> (String -> IO ()) -> IO ()
@@ -122,4 +132,4 @@ tests = TestList [
   ]
 
 main = do
-  withDirectory testDirectory (const () <$> runTestTT tests)
+  withDirectory "" (const () <$> runTestTT tests)
