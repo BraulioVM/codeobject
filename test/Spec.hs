@@ -202,6 +202,39 @@ testJumpIfBoolean = TestCase $ do
                            ]
       }
 
+testBasicComparisons = TestCase $ do
+  createAndImport comparisonOperations $ \output ->
+    assertEqual "Python output" output "True\nFalse\nFalse\nTrue\n"
+
+  where
+    comparisonOperations :: CodeObject
+    comparisonOperations = defaultObject
+      { codeString = getByteCode
+                     [ LOAD_CONSTANT 1
+                     , LOAD_CONSTANT 2
+                     , COMPARE_OP LESS
+                     , PRINT_EXPR
+                     , LOAD_CONSTANT 1
+                     , LOAD_CONSTANT 2
+                     , COMPARE_OP GREATER
+                     , PRINT_EXPR
+                     , LOAD_CONSTANT 1
+                     , LOAD_CONSTANT 2
+                     , COMPARE_OP EQUAL
+                     , PRINT_EXPR
+                     , LOAD_CONSTANT 1
+                     , LOAD_CONSTANT 1
+                     , COMPARE_OP EQUAL
+                     , PRINT_EXPR
+                     , LOAD_CONSTANT 0
+                     , RETURN_VALUE
+                     ]
+      , constants = PTuple [ PyNone
+                           , PyInt 200
+                           , PyInt 300
+                           ]
+      }
+
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
   , TestLabel "binary_add object" testIntegerAdd
@@ -209,6 +242,7 @@ tests = TestList
   , TestLabel "load strings" testStrings
   , TestLabel "jumps forward" testJumpForward
   , TestLabel "boolean jumps" testJumpIfBoolean
+  , TestLabel "test basic comparisons" testBasicComparisons
   ]
 
 main = do
