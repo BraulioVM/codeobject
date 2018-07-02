@@ -131,10 +131,30 @@ test3 = TestCase $ do
   createAndImport localVarNames $ \output ->
     assertEqual "Python output" output "4\n"
 
+useStrings :: CodeObject
+useStrings = defaultObject
+  { nLocals = 0
+  , stackSize = 3
+  , codeString = getByteCode
+    [ LOAD_CONSTANT 1,
+      LOAD_CONSTANT 2,
+      BINARY_ADD,
+      PRINT_EXPR,
+      LOAD_CONSTANT 0,
+      RETURN_VALUE
+    ]
+  , constants = PTuple [PyNone, PyString "hey", PyString "ho"]
+  }
+
+testStrings = TestCase $ do
+  createAndImport useStrings $ \output ->
+    assertEqual "Python output" output "'heyho'\n"
+
 tests = TestList
   [ TestLabel "basic .pyc making" test1
   , TestLabel "binary_add object" test2
   , TestLabel "store_fast and load_fast" test3
+  , TestLabel "load strings" testStrings
   ]
 
 main = do
