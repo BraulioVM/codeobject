@@ -87,7 +87,6 @@ instance Marshable PycFile where
      python35MagicNumber :: ByteString
      python35MagicNumber = pack [0x16, 0x0d, 0x0d, 0x0a]
 
-
-
+-- | Turn a `PycFile` into a real .pyc file.
 writePycFile :: FilePath -> PycFile -> IO ()
 writePycFile fp pyc = BS.writeFile fp (marshal pyc)
