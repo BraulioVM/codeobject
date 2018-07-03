@@ -63,6 +63,7 @@ instance Marshable PyExpr where
                   else Nothing
 
       items = BS.concat (marshal <$> exprs)
+
 instance Marshable CodeObject where
   marshal obj = BS.concat (fmap ($ obj) [
     const (csingleton 'c'),

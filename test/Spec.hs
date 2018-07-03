@@ -210,22 +210,21 @@ testBasicComparisons = TestCase $ do
     assertEqual "Python output" output "True\nFalse\nFalse\nTrue\n"
 
   where
+    compareConstants :: ComparisonOperation -> [Operation]
+    compareConstants op =
+      [ LOAD_CONSTANT 1
+      , LOAD_CONSTANT 2
+      , COMPARE_OP op
+      , PRINT_EXPR
+      ]
+
     comparisonOperations :: CodeObject
     comparisonOperations = defaultObject
-      { codeString = getByteCode
+      { codeString = getByteCode $
+                     compareConstants LESS `mappend`
+                     compareConstants GREATER `mappend`
+                     compareConstants EQUAL `mappend`
                      [ LOAD_CONSTANT 1
-                     , LOAD_CONSTANT 2
-                     , COMPARE_OP LESS
-                     , PRINT_EXPR
-                     , LOAD_CONSTANT 1
-                     , LOAD_CONSTANT 2
-                     , COMPARE_OP GREATER
-                     , PRINT_EXPR
-                     , LOAD_CONSTANT 1
-                     , LOAD_CONSTANT 2
-                     , COMPARE_OP EQUAL
-                     , PRINT_EXPR
-                     , LOAD_CONSTANT 1
                      , LOAD_CONSTANT 1
                      , COMPARE_OP EQUAL
                      , PRINT_EXPR
