@@ -266,6 +266,48 @@ testCallFunction = TestCase $ do
                        ]
       }
 
+testMakeFunction = TestCase $ do
+  createAndImport createFunction $ \output ->
+    assertEqual "Python output" output "2448\n"
+
+  where
+    createFunction :: CodeObject
+    createFunction = defaultObject
+      { codeString = getByteCode
+                     [ LOAD_CONST 1 -- code object
+                     , LOAD_CONST 2 -- function name
+                     , MAKE_FUNCTION 0
+                     , LOAD_CONST 3 -- 1337
+                     , LOAD_CONST 4 -- 1111
+                     , CALL_FUNCTION 2 -- call made function
+                     , PRINT_EXPR
+                     , LOAD_CONST 0
+                     , RETURN_VALUE
+                     ]
+                     
+      , constants = PTuple [ PyNone
+                           , PyCodeObject (defaultObject
+                                           { argCount = 2
+                                           , nLocals = 2
+                                           , stackSize = 2
+                                           , codeString = getByteCode
+                                             [ LOAD_FAST 0
+                                             , LOAD_FAST 1
+                                             , BINARY_ADD
+                                             , RETURN_VALUE
+                                             ]
+                                           , varNames = PTuple
+                                             [ "a"
+                                             , "b" ]
+                                           , filename = ""
+                                           , name = "g"
+                                           })
+                           , PyString "g"
+                           , PyInt 1337
+                           , PyInt 1111
+                           ]
+      }
+
 
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
@@ -276,6 +318,7 @@ tests = TestList
   , TestLabel "boolean jumps" testJumpIfBoolean
   , TestLabel "test basic comparisons" testBasicComparisons
   , TestLabel "basic function calling" testCallFunction
+  , TestLabel "basic function making" testMakeFunction
   ]
 
 main = do

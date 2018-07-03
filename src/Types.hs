@@ -20,6 +20,7 @@ data PyExpr = PyNone -- ^ None value
             | PyBool Bool -- ^ A python boolean
             | PyTuple [PyExpr] -- ^ A python tuple
             | PyList [PyExpr] -- ^ A python list
+            | PyCodeObject CodeObject -- ^ A python code object
 
 class ToPyExpr a where
   toPyExpr :: a -> PyExpr
@@ -38,6 +39,9 @@ instance ToPyExpr Bool where
 
 instance ToPyExpr a => ToPyExpr (PTuple a) where
   toPyExpr = PyTuple . Prelude.map toPyExpr . unPTuple
+
+instance ToPyExpr CodeObject where
+  toPyExpr = PyCodeObject
 
 -- | Python code object
 data CodeObject = CodeObject
