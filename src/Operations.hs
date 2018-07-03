@@ -22,13 +22,16 @@ data Operation = BINARY_ADD
                | BINARY_MULTIPLY
                | LOAD_FAST Word16
                | STORE_FAST Word16
-               | LOAD_CONSTANT Word16
+               | LOAD_CONST Word16
+               | LOAD_GLOBAL Word16
                | PRINT_EXPR
                | RETURN_VALUE
                | JUMP_FORWARD Word16
                | POP_JUMP_IF_TRUE Word16
                | POP_JUMP_IF_FALSE Word16
                | COMPARE_OP ComparisonOperation
+               | MAKE_FUNCTION Word16
+               | CALL_FUNCTION Word16
   
 -- | Turn a string of bytecode instructions
 -- into the associated bytestring
@@ -40,14 +43,10 @@ opByteCode :: Operation -> ByteString
 opByteCode BINARY_ADD = singleton 23
 opByteCode BINARY_MULTIPLY = singleton 20
 opByteCode (LOAD_FAST n) = opWithArgument 124 n
-  where
-    (lsb, msb) = encodeWord16 n
 opByteCode (STORE_FAST n) = opWithArgument 125 n
-  where
-    (lsb, msb) = encodeWord16 n
-opByteCode (LOAD_CONSTANT n) = opWithArgument 100 n
-  where
-    (lsb, msb) = encodeWord16 n
+opByteCode (LOAD_CONST n) = opWithArgument 100 n
+opByteCode (LOAD_GLOBAL n) = opWithArgument 116 n
+
 opByteCode RETURN_VALUE = singleton 83
 opByteCode PRINT_EXPR = singleton 70
 
@@ -67,6 +66,9 @@ opByteCode (COMPARE_OP cmp) = pack [107, cmp_code cmp, 0]
     cmp_code NOT_IN = 7
     cmp_code IS = 8
     cmp_code IS_NOT = 9
+
+opByteCode (MAKE_FUNCTION n) = opWithArgument 132 n
+opByteCode (CALL_FUNCTION n) = opWithArgument 131 n
 
 opWithArgument :: Word8 -> Word16 -> ByteString
 opWithArgument op n = pack [op, lsb, msb]

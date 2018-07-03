@@ -3,6 +3,7 @@ module Main where
 
 import Data.Time.Clock.POSIX
 import Data.Time.Clock
+import Data.Word
 import Control.Monad (unless)
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
@@ -29,7 +30,6 @@ withFile fp content action = do
   removeFile filename
     where
       filename = testFile fp
-
 
 withBFile :: FilePath -> ByteString -> IO () -> IO ()
 withBFile fp content action = do
@@ -85,9 +85,9 @@ createAndImport co action = do
 loadConstantObject :: CodeObject
 loadConstantObject = defaultObject {
   codeString = getByteCode [
-      LOAD_CONSTANT 1,
+      LOAD_CONST 1,
       PRINT_EXPR,
-      LOAD_CONSTANT 0,
+      LOAD_CONST 0,
       RETURN_VALUE
       ],
    constants = PTuple [PyNone, PyInt 3]
@@ -100,11 +100,11 @@ testBasic = TestCase $ do
 
 binaryAddObject = defaultObject {
   codeString = getByteCode [
-      LOAD_CONSTANT 1,
-      LOAD_CONSTANT 2,
+      LOAD_CONST 1,
+      LOAD_CONST 2,
       BINARY_ADD,
       PRINT_EXPR,
-      LOAD_CONSTANT 0,
+      LOAD_CONST 0,
       RETURN_VALUE
       ],
     constants = PTuple [PyNone, PyInt 5, PyInt 6]
@@ -117,11 +117,11 @@ testIntegerAdd = TestCase $ do
 localVarNames = defaultObject {
   nLocals = 1,
   codeString = getByteCode [
-      LOAD_CONSTANT 1,
+      LOAD_CONST 1,
       STORE_FAST 1,
       LOAD_FAST 1,
       PRINT_EXPR,
-      LOAD_CONSTANT 0,
+      LOAD_CONST 0,
       RETURN_VALUE
       ],
     constants = PTuple [PyNone, PyInt 4]
@@ -136,11 +136,11 @@ useStrings = defaultObject
   { nLocals = 0
   , stackSize = 3
   , codeString = getByteCode
-    [ LOAD_CONSTANT 1,
-      LOAD_CONSTANT 2,
+    [ LOAD_CONST 1,
+      LOAD_CONST 2,
       BINARY_ADD,
       PRINT_EXPR,
-      LOAD_CONSTANT 0,
+      LOAD_CONST 0,
       RETURN_VALUE
     ]
   , constants = PTuple [ PyNone
@@ -156,11 +156,11 @@ testStrings = TestCase $ do
 jumpForward :: CodeObject
 jumpForward = defaultObject
   { codeString = getByteCode
-                 [ LOAD_CONSTANT 1
-                 , JUMP_FORWARD 3 -- LOAD_CONSTANT uses 3 bytes
-                 , LOAD_CONSTANT 2
+                 [ LOAD_CONST 1
+                 , JUMP_FORWARD 3 -- LOAD_CONST uses 3 bytes
+                 , LOAD_CONST 2
                  , PRINT_EXPR
-                 , LOAD_CONSTANT 0
+                 , LOAD_CONST 0
                  , RETURN_VALUE
                  ]
   , constants = PTuple [PyNone, PyInt 13, PyInt 41]
@@ -178,23 +178,23 @@ testJumpIfBoolean = TestCase $ do
     jumpIfBoolean :: CodeObject
     jumpIfBoolean = defaultObject
       { codeString = getByteCode
-                     [ LOAD_CONSTANT 3 -- 100 | 0 
-                     , LOAD_CONSTANT 1 -- True | 3
+                     [ LOAD_CONST 3 -- 100 | 0 
+                     , LOAD_CONST 1 -- True | 3
                      , POP_JUMP_IF_TRUE 12 -- x | 6
-                     , LOAD_CONSTANT 4 -- 200 | 9
+                     , LOAD_CONST 4 -- 200 | 9
                      , PRINT_EXPR -- prints 100 | 12
-                     , LOAD_CONSTANT 2 -- False | 15
+                     , LOAD_CONST 2 -- False | 15
                      , POP_JUMP_IF_TRUE 10000 -- would crash
-                     , LOAD_CONSTANT 3 -- 100 | 19
-                     , LOAD_CONSTANT 2 -- False | 22
+                     , LOAD_CONST 3 -- 100 | 19
+                     , LOAD_CONST 2 -- False | 22
                      , POP_JUMP_IF_FALSE 31 -- x | 25
-                     , LOAD_CONSTANT 4 -- 200 | 28
+                     , LOAD_CONST 4 -- 200 | 28
                      , PRINT_EXPR -- prints 100 | 31
-                     , LOAD_CONSTANT 1 -- True | 32
+                     , LOAD_CONST 1 -- True | 32
                      , POP_JUMP_IF_FALSE 41 -- x | 35
                      , JUMP_FORWARD 1  -- 1 | 38
                      , PRINT_EXPR -- won't execute | 41
-                     , LOAD_CONSTANT 0 -- | 42
+                     , LOAD_CONST 0 -- | 42
                      , RETURN_VALUE -- | 45
                      ]
       , constants = PTuple [ PyNone
@@ -210,10 +210,13 @@ testBasicComparisons = TestCase $ do
     assertEqual "Python output" output "True\nFalse\nFalse\nTrue\n"
 
   where
-    compareConstants :: ComparisonOperation -> [Operation]
-    compareConstants op =
-      [ LOAD_CONSTANT 1
-      , LOAD_CONSTANT 2
+    compareConstants :: Word16
+                     -> Word16
+                     -> ComparisonOperation
+                     -> [Operation]
+    compareConstants x y op =
+      [ LOAD_CONST x
+      , LOAD_CONST y
       , COMPARE_OP op
       , PRINT_EXPR
       ]
@@ -221,14 +224,11 @@ testBasicComparisons = TestCase $ do
     comparisonOperations :: CodeObject
     comparisonOperations = defaultObject
       { codeString = getByteCode $
-                     compareConstants LESS `mappend`
-                     compareConstants GREATER `mappend`
-                     compareConstants EQUAL `mappend`
-                     [ LOAD_CONSTANT 1
-                     , LOAD_CONSTANT 1
-                     , COMPARE_OP EQUAL
-                     , PRINT_EXPR
-                     , LOAD_CONSTANT 0
+                     compareConstants 1 2 LESS `mappend`
+                     compareConstants 1 2 GREATER `mappend`
+                     compareConstants 1 2 EQUAL `mappend`
+                     compareConstants 1 1 EQUAL `mappend`
+                     [ LOAD_CONST 0
                      , RETURN_VALUE
                      ]
       , constants = PTuple [ PyNone
@@ -236,6 +236,36 @@ testBasicComparisons = TestCase $ do
                            , PyInt 300
                            ]
       }
+
+testCallFunction = TestCase $ do
+  createAndImport callFunctions $ \output ->
+    assertEqual "Python output" output "400\n"
+
+  where
+    callFunctions :: CodeObject
+    callFunctions = defaultObject
+      { codeString = getByteCode
+                     [ LOAD_GLOBAL 0 -- print
+                     , LOAD_GLOBAL 1 -- max
+                     , LOAD_CONST 1 -- 200
+                     , LOAD_CONST 2 -- 400
+                     , LOAD_CONST 3 -- 300
+                     , CALL_FUNCTION 3 -- max(200, 400, 300)
+                     , CALL_FUNCTION 1 -- print(400)
+                     , LOAD_CONST 0
+                     , RETURN_VALUE
+                     ]
+                     
+      , constants = PTuple [ PyNone
+                           , PyInt 200
+                           , PyInt 400
+                           , PyInt 300
+                           ]
+      , names = PTuple [ "print"
+                       , "max"
+                       ]
+      }
+
 
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
@@ -245,6 +275,7 @@ tests = TestList
   , TestLabel "jumps forward" testJumpForward
   , TestLabel "boolean jumps" testJumpIfBoolean
   , TestLabel "test basic comparisons" testBasicComparisons
+  , TestLabel "basic function calling" testCallFunction
   ]
 
 main = do
