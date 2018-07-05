@@ -88,3 +88,9 @@ defaultObject = CodeObject {
   freeVars = PTuple [],
   cellVars = PTuple []
   }
+
+-- | Unix timestamp
+type Timestamp = Int
+
+-- | Represents a pyc file
+data PycFile = PycFile Timestamp CodeObject

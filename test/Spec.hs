@@ -13,9 +13,13 @@ import System.Exit
 import System.FilePath
 import System.Process
 import Test.HUnit
-import Operations
-import Types
+
 import Marshal
+import Operations
+import Output
+import Types
+
+
 
 testDirectory :: FilePath
 testDirectory = "test" </> "testfiles"
@@ -23,64 +27,46 @@ testDirectory = "test" </> "testfiles"
 testFile :: FilePath -> FilePath
 testFile = (testDirectory </>)
 
-withFile :: FilePath -> String -> IO () -> IO ()
-withFile fp content action = do
-  writeFile filename content
-  action
-  removeFile filename
-    where
-      filename = testFile fp
-
-withBFile :: FilePath -> ByteString -> IO () -> IO ()
-withBFile fp content action = do
-  BS.writeFile filename content
-  action
-  removeFile filename
-    where
-      filename = testFile fp
-
 withDirectory :: FilePath -> IO () -> IO ()
-withDirectory fp action = do
+withDirectory path action = do
   exists <- doesDirectoryExist path
   unless exists (createDirectory path)
   action
-  removeDirectory path
-    where
-      path = testFile fp
+  removeDirectoryRecursive path
 
-getModifTime :: FilePath -> IO UTCTime
-getModifTime = getModificationTime . testFile
-
-withCreatePythonFiles :: String -> CodeObject -> IO () -> IO ()
-withCreatePythonFiles modName co action = do
-  withFile modFilename "" $ do
-    withFile importer "import mod" $ do
-      withDirectory pycache $ do
-        -- construct a PycFile
-        modifTime <- getModifTime modFilename
-        let (posixTime :: POSIXTime) = utcTimeToPOSIXSeconds modifTime
-            pycFile = PycFile (floor posixTime) co
-
-        withBFile pycFilename (marshal pycFile) action
-      
+withCreatePythonFiles :: CodeObject -> (FilePath -> IO ()) -> IO ()
+withCreatePythonFiles codeObject action = do
+  withDirectory tmpDirectory $ do
+    compileToFiles tmpDirectory modName codeObject
+    writeFile importerPath importerCode
+  
+    action importerPath
   where
-    modFilename = modName ++ ".py"
-    importer = "importer.py"
-    pycache =  "__pycache__"
-    pycFilename = pycache </> modName ++ ".cpython-35.pyc"
+    tmpDirectory :: FilePath
+    tmpDirectory = (testFile "mods")
+  
+    importerPath :: FilePath
+    importerPath = tmpDirectory </> "importer.py"
+
+    modName :: String
+    modName = "mod"
+
+    importerCode :: String
+    importerCode = "import " ++ modName
 
 createAndImport :: CodeObject -> (String -> IO ()) -> IO ()
 createAndImport co action = do
-  withCreatePythonFiles "mod" co $ do
-    (exitCode, output, stderr) <- runPython
+  withCreatePythonFiles co $ \importerPath -> do
+    (exitCode, output, stderr) <- runPython importerPath
     case exitCode of
-      ExitSuccess ->  action output
+      ExitSuccess -> action output
       ExitFailure errorCode -> assertFailure $ "Python error " ++
         show errorCode ++ ": " ++ output ++ stderr
       where
-        args = [testFile "importer.py"]
         stdin = ""
-        runPython = readProcessWithExitCode "python3" args stdin
+        runPython :: FilePath -> IO (ExitCode, String, String)
+        runPython importerPath =
+          readProcessWithExitCode "python3" [importerPath] stdin
 
 loadConstantObject :: CodeObject
 loadConstantObject = defaultObject {
@@ -322,4 +308,4 @@ tests = TestList
   ]
 
 main = do
-  withDirectory "" (const () <$> runTestTT tests)
+  withDirectory testDirectory (const () <$> runTestTT tests)

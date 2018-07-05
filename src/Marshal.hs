@@ -85,12 +85,6 @@ instance Marshable CodeObject where
     marshal . lnotab
     ])
 
--- | Unix timestamp
-type Timestamp = Int
-
--- | Represents a pyc file
-data PycFile = PycFile Timestamp CodeObject
-
 instance Marshable PycFile where
   marshal (PycFile timestamp codeObject) = BS.concat
     [ python35MagicNumber
@@ -103,7 +97,3 @@ instance Marshable PycFile where
      -- python3.5
      python35MagicNumber :: ByteString
      python35MagicNumber = pack [0x16, 0x0d, 0x0d, 0x0a]
-
--- | Turn a `PycFile` into a real .pyc file.
-writePycFile :: FilePath -> PycFile -> IO ()
-writePycFile fp pyc = BS.writeFile fp (marshal pyc)
