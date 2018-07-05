@@ -8,6 +8,9 @@ import Operations
 -- marshalled as a python tuple.
 newtype PTuple a = PTuple [a]
 
+instance Show a => Show (PTuple a) where
+  show (PTuple as) = "PTuple " ++ show as
+
 unPTuple :: PTuple a -> [a]
 unPTuple (PTuple as) = as
 
@@ -21,6 +24,7 @@ data PyExpr = PyNone -- ^ None value
             | PyTuple [PyExpr] -- ^ A python tuple
             | PyList [PyExpr] -- ^ A python list
             | PyCodeObject CodeObject -- ^ A python code object
+            deriving (Show)
 
 class ToPyExpr a where
   toPyExpr :: a -> PyExpr
@@ -66,7 +70,7 @@ data CodeObject = CodeObject
   , freeVars :: PTuple String -- ^ Variables used in the function
                               -- that are neither local nor global 
   , cellVars :: PTuple String  -- ^ Local variables used by inner functions
-  }
+  } deriving (Show)
 
 
 -- | A good value to build simple code objects from

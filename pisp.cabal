@@ -18,11 +18,14 @@ library
   hs-source-dirs:      src
   exposed-modules:     Types,
                        Operations,
-                       Marshal
+                       Marshal,
+                       PyMonad
   build-depends:       base,
                        bytestring,
                        binary,
-                       utf8-string
+                       utf8-string,
+                       mtl
+                       
 Test-Suite test
   type:                exitcode-stdio-1.0
   main-is:             test/Spec.hs
@@ -33,6 +36,7 @@ Test-Suite test
                        directory,
                        bytestring,
                        time,
-                       process
+                       process,
+                       mtl
 
   

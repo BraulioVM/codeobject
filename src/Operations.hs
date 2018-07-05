@@ -16,7 +16,7 @@ data ComparisonOperation = LESS
                          | NOT_IN
                          | IS
                          | IS_NOT
-
+                         deriving (Show)
 -- | Represents python bytecode instructions
 data Operation = BINARY_ADD
                | BINARY_MULTIPLY
@@ -32,6 +32,7 @@ data Operation = BINARY_ADD
                | COMPARE_OP ComparisonOperation
                | MAKE_FUNCTION Word16
                | CALL_FUNCTION Word16
+               deriving (Show)
   
 -- | Turn a string of bytecode instructions
 -- into the associated bytestring
