@@ -43,5 +43,7 @@ Test-Suite test
                        time,
                        process,
                        mtl
-  other-modules:       Util
+  other-modules:       Util,
+                       BasicTests,
+                       TestPyMonad
   
