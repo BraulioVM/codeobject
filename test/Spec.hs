@@ -5,6 +5,7 @@ import Data.Time.Clock.POSIX
 import Data.Time.Clock
 import Data.Word
 import Control.Monad (unless)
+import Control.Monad.State
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import System.IO hiding (withFile)
@@ -17,9 +18,8 @@ import Test.HUnit
 import Marshal
 import Operations
 import Output
+import PyMonad
 import Types
-
-
 
 testDirectory :: FilePath
 testDirectory = "test" </> "testfiles"
@@ -296,6 +296,18 @@ testMakeFunction =
       }
 
 
+testPyMonad = TestCase $ do
+  createAndImport co $ \output ->
+    assertEqual "Python output" output "30\n'hey'\n'hey'\n30\n"
+  where
+    co = createCodeObject $ do
+      x <- defConstant $ PyInt 30
+      y <- defConstant $ PyString "hey"
+      printRef x
+      printRef y
+      printRef y
+      printRef x
+
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
   , TestLabel "binary_add object" testIntegerAdd
@@ -306,6 +318,7 @@ tests = TestList
   , TestLabel "test basic comparisons" testBasicComparisons
   , TestLabel "basic function calling" testCallFunction
   , TestLabel "basic function making" testMakeFunction
+  , TestLabel "basic pymonad" testPyMonad
   ]
 
 main = do
