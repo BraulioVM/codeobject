@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Marshal where
 
-import Data.Bits
 import Data.ByteString (pack, singleton, ByteString)
 import Data.ByteString.UTF8 (fromString)
 import Data.Binary (encode, Binary)

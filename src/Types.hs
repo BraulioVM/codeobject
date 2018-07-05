@@ -22,7 +22,6 @@ data PyExpr = PyNone -- ^ None value
             | PyString String -- ^ A python string
             | PyBool Bool -- ^ A python boolean
             | PyTuple [PyExpr] -- ^ A python tuple
-            | PyList [PyExpr] -- ^ A python list
             | PyCodeObject CodeObject -- ^ A python code object
             deriving (Show)
 

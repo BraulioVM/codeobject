@@ -3,7 +3,6 @@ module Output where
 import Control.Monad (unless)
 import qualified Data.ByteString as BS
 import Data.Time.Clock.POSIX
-import Data.Time.Clock
 import System.Directory
 import System.FilePath
 

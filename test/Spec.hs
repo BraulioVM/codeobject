@@ -1,80 +1,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
-import Data.Time.Clock.POSIX
-import Data.Time.Clock
 import Data.Word
-import Control.Monad (unless)
-import Control.Monad.State
-import qualified Data.ByteString as BS
-import Data.ByteString (ByteString)
-import System.IO hiding (withFile)
-import System.Directory
-import System.Exit
-import System.FilePath
-import System.Process
 import Test.HUnit
 
-import Marshal
+import Util
+
 import Operations
-import Output
 import PyMonad
 import Types
-
-testDirectory :: FilePath
-testDirectory = "test" </> "testfiles"
-
-testFile :: FilePath -> FilePath
-testFile = (testDirectory </>)
-
-withDirectory :: FilePath -> IO () -> IO ()
-withDirectory path action = do
-  exists <- doesDirectoryExist path
-  unless exists (createDirectory path)
-  action
-  removeDirectoryRecursive path
-
-withCreatePythonFiles :: CodeObject -> (FilePath -> IO ()) -> IO ()
-withCreatePythonFiles codeObject action = do
-  withDirectory tmpDirectory $ do
-    compileToFiles tmpDirectory modName codeObject
-    writeFile importerPath importerCode
-  
-    action importerPath
-  where
-    tmpDirectory :: FilePath
-    tmpDirectory = (testFile "mods")
-  
-    importerPath :: FilePath
-    importerPath = tmpDirectory </> "importer.py"
-
-    modName :: String
-    modName = "mod"
-
-    importerCode :: String
-    importerCode = "import " ++ modName
-
-createAndImport :: CodeObject -> (String -> IO ()) -> IO ()
-createAndImport co action = do
-  withCreatePythonFiles co $ \importerPath -> do
-    (exitCode, output, stderr) <- runPython importerPath
-    case exitCode of
-      ExitSuccess -> action output
-      ExitFailure errorCode -> assertFailure $ "Python error " ++
-        show errorCode ++ ": " ++ output ++ stderr
-      where
-        stdin = ""
-        runPython :: FilePath -> IO (ExitCode, String, String)
-        runPython importerPath =
-          readProcessWithExitCode "python3" [importerPath] stdin
-
-testCodeObjectOutput :: CodeObject
-                     -> [String]
-                     -> Test
-testCodeObjectOutput codeObject expected = TestCase $ 
-  createAndImport codeObject $ \pythonOutput ->
-    assertEqual "Python output" expected (lines pythonOutput)
-
 
 testBasic :: Test
 testBasic = testCodeObjectOutput loadConstantObject ["3"]
@@ -296,9 +230,8 @@ testMakeFunction =
       }
 
 
-testPyMonad = TestCase $ do
-  createAndImport co $ \output ->
-    assertEqual "Python output" output "30\n'hey'\n'hey'\n30\n"
+testPyMonad :: Test
+testPyMonad = testCodeObjectOutput co ["30", "'hey'", "'hey'", "30"]
   where
     co = createCodeObject $ do
       x <- defConstant $ PyInt 30
@@ -308,6 +241,7 @@ testPyMonad = TestCase $ do
       printRef y
       printRef x
 
+tests :: Test
 tests = TestList
   [ TestLabel "basic .pyc making" testBasic
   , TestLabel "binary_add object" testIntegerAdd
@@ -321,5 +255,6 @@ tests = TestList
   , TestLabel "basic pymonad" testPyMonad
   ]
 
+main :: IO ()
 main = do
   withDirectory testDirectory (const () <$> runTestTT tests)

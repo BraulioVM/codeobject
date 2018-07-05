@@ -27,12 +27,13 @@ library
                        utf8-string,
                        filepath,
                        directory,
-                       time
+                       time,
                        mtl
 
 Test-Suite test
   type:                exitcode-stdio-1.0
-  main-is:             test/Spec.hs
+  hs-source-dirs:      test
+  main-is:             Spec.hs
   build-depends:       base,
                        HUnit,
                        pisp,
@@ -42,5 +43,5 @@ Test-Suite test
                        time,
                        process,
                        mtl
-
+  other-modules:       Util
   
