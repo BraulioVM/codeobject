@@ -75,85 +75,91 @@ testCodeObjectOutput codeObject expected = TestCase $
   createAndImport codeObject $ \pythonOutput ->
     assertEqual "Python output" expected (lines pythonOutput)
 
-loadConstantObject :: CodeObject
-loadConstantObject = defaultObject {
-  codeString = getByteCode [
-      LOAD_CONST 1,
-      PRINT_EXPR,
-      LOAD_CONST 0,
-      RETURN_VALUE
-      ],
-   constants = PTuple [PyNone, PyInt 3]
-}
 
-
+testBasic :: Test
 testBasic = testCodeObjectOutput loadConstantObject ["3"]
+  where
+    loadConstantObject :: CodeObject
+    loadConstantObject = defaultObject
+      { codeString = getByteCode
+                   [ LOAD_CONST 1
+                   , PRINT_EXPR
+                   , LOAD_CONST 0
+                   , RETURN_VALUE
+                   ]
+      , constants = PTuple [PyNone, PyInt 3]
+      }
 
-binaryAddObject = defaultObject {
-  codeString = getByteCode [
-      LOAD_CONST 1,
-      LOAD_CONST 2,
-      BINARY_ADD,
-      PRINT_EXPR,
-      LOAD_CONST 0,
-      RETURN_VALUE
-      ],
-    constants = PTuple [PyNone, PyInt 5, PyInt 6]
-  }
-
+testIntegerAdd :: Test
 testIntegerAdd = testCodeObjectOutput binaryAddObject ["11"]
+  where
+    binaryAddObject = defaultObject
+      { codeString = getByteCode 
+                     [ LOAD_CONST 1 -- 5 
+                     , LOAD_CONST 2 -- 6
+                     , BINARY_ADD
+                     , PRINT_EXPR
+                     , LOAD_CONST 0
+                     , RETURN_VALUE
+                     ]
+      , constants = PTuple [PyNone, PyInt 5, PyInt 6]
+      }
 
-localVarNames = defaultObject {
-  nLocals = 1,
-  codeString = getByteCode [
-      LOAD_CONST 1,
-      STORE_FAST 1,
-      LOAD_FAST 1,
-      PRINT_EXPR,
-      LOAD_CONST 0,
-      RETURN_VALUE
-      ],
-    constants = PTuple [PyNone, PyInt 4]
-  }
-
-
+testLocalVars :: Test
 testLocalVars = testCodeObjectOutput localVarNames ["4"]
+  where
+    localVarNames :: CodeObject
+    localVarNames = defaultObject
+      { nLocals = 1
+      , codeString = getByteCode
+                     [ LOAD_CONST 1 -- 4
+                     , STORE_FAST 1
+                     , LOAD_FAST 1
+                     , PRINT_EXPR
+                     , LOAD_CONST 0
+                     , RETURN_VALUE
+                     ]
+      , constants = PTuple [PyNone, PyInt 4]
+      }
 
-useStrings :: CodeObject
-useStrings = defaultObject
-  { nLocals = 0
-  , stackSize = 3
-  , codeString = getByteCode
-    [ LOAD_CONST 1,
-      LOAD_CONST 2,
-      BINARY_ADD,
-      PRINT_EXPR,
-      LOAD_CONST 0,
-      RETURN_VALUE
-    ]
-  , constants = PTuple [ PyNone
-                       , PyString "hñɊey" -- unicode strings
-                       , PyString "ho"
-                       ]
-  }
-
+testStrings :: Test
 testStrings = testCodeObjectOutput useStrings ["'hñɊeyho'"]
+  where
+    useStrings :: CodeObject
+    useStrings = defaultObject
+      { nLocals = 0
+      , stackSize = 3
+      , codeString = getByteCode
+        [ LOAD_CONST 1,
+          LOAD_CONST 2,
+          BINARY_ADD,
+          PRINT_EXPR,
+          LOAD_CONST 0,
+          RETURN_VALUE
+        ]
+      , constants = PTuple [ PyNone
+                           , PyString "hñɊey" -- unicode strings
+                           , PyString "ho"
+                           ]
+      }
 
-jumpForward :: CodeObject
-jumpForward = defaultObject
-  { codeString = getByteCode
-                 [ LOAD_CONST 1
-                 , JUMP_FORWARD 3 -- LOAD_CONST uses 3 bytes
-                 , LOAD_CONST 2
-                 , PRINT_EXPR
-                 , LOAD_CONST 0
-                 , RETURN_VALUE
-                 ]
-  , constants = PTuple [PyNone, PyInt 13, PyInt 41]
-  }
-
+testJumpForward :: Test
 testJumpForward = testCodeObjectOutput jumpForward ["13"]
+  where
+    jumpForward :: CodeObject
+    jumpForward = defaultObject
+      { codeString = getByteCode
+                     [ LOAD_CONST 1
+                     , JUMP_FORWARD 3 -- LOAD_CONST uses 3 bytes
+                     , LOAD_CONST 2
+                     , PRINT_EXPR
+                     , LOAD_CONST 0
+                     , RETURN_VALUE
+                     ]
+      , constants = PTuple [PyNone, PyInt 13, PyInt 41]
+      }
 
+testJumpIfBoolean :: Test
 testJumpIfBoolean = testCodeObjectOutput jumpIfBoolean ["100", "100"]
   where
     jumpIfBoolean :: CodeObject
@@ -186,6 +192,7 @@ testJumpIfBoolean = testCodeObjectOutput jumpIfBoolean ["100", "100"]
                            ]
       }
 
+testBasicComparisons :: Test
 testBasicComparisons =
   testCodeObjectOutput comparisonOperations [ "True"
                                             , "False"
@@ -219,6 +226,7 @@ testBasicComparisons =
                            ]
       }
 
+testCallFunction :: Test
 testCallFunction =
   testCodeObjectOutput callFunctions ["400"]
   where
@@ -246,6 +254,7 @@ testCallFunction =
                        ]
       }
 
+testMakeFunction :: Test
 testMakeFunction =
   testCodeObjectOutput createFunction ["2448"]
   where
