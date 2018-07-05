@@ -68,6 +68,13 @@ createAndImport co action = do
         runPython importerPath =
           readProcessWithExitCode "python3" [importerPath] stdin
 
+testCodeObjectOutput :: CodeObject
+                     -> [String]
+                     -> Test
+testCodeObjectOutput codeObject expected = TestCase $ 
+  createAndImport codeObject $ \pythonOutput ->
+    assertEqual "Python output" expected (lines pythonOutput)
+
 loadConstantObject :: CodeObject
 loadConstantObject = defaultObject {
   codeString = getByteCode [
@@ -80,9 +87,7 @@ loadConstantObject = defaultObject {
 }
 
 
-testBasic = TestCase $ do
-  createAndImport loadConstantObject $ \output ->
-    assertEqual "Python output" output "3\n"
+testBasic = testCodeObjectOutput loadConstantObject ["3"]
 
 binaryAddObject = defaultObject {
   codeString = getByteCode [
@@ -96,9 +101,7 @@ binaryAddObject = defaultObject {
     constants = PTuple [PyNone, PyInt 5, PyInt 6]
   }
 
-testIntegerAdd = TestCase $ do
-  createAndImport binaryAddObject $ \output ->
-    assertEqual "Python output" output "11\n"
+testIntegerAdd = testCodeObjectOutput binaryAddObject ["11"]
 
 localVarNames = defaultObject {
   nLocals = 1,
@@ -113,9 +116,8 @@ localVarNames = defaultObject {
     constants = PTuple [PyNone, PyInt 4]
   }
 
-testLocalVars = TestCase $ do
-  createAndImport localVarNames $ \output ->
-    assertEqual "Python output" output "4\n"
+
+testLocalVars = testCodeObjectOutput localVarNames ["4"]
 
 useStrings :: CodeObject
 useStrings = defaultObject
@@ -135,9 +137,7 @@ useStrings = defaultObject
                        ]
   }
 
-testStrings = TestCase $ do
-  createAndImport useStrings $ \output ->
-    assertEqual "Python output" output "'hñɊeyho'\n"
+testStrings = testCodeObjectOutput useStrings ["'hñɊeyho'"]
 
 jumpForward :: CodeObject
 jumpForward = defaultObject
@@ -152,14 +152,9 @@ jumpForward = defaultObject
   , constants = PTuple [PyNone, PyInt 13, PyInt 41]
   }
 
-testJumpForward = TestCase $ do
-  createAndImport jumpForward $ \output ->
-    assertEqual "Python output" output "13\n"
+testJumpForward = testCodeObjectOutput jumpForward ["13"]
 
-testJumpIfBoolean = TestCase $ do
-  createAndImport jumpIfBoolean $ \output ->
-    assertEqual "Python output" output "100\n100\n"
-
+testJumpIfBoolean = testCodeObjectOutput jumpIfBoolean ["100", "100"]
   where
     jumpIfBoolean :: CodeObject
     jumpIfBoolean = defaultObject
@@ -191,10 +186,11 @@ testJumpIfBoolean = TestCase $ do
                            ]
       }
 
-testBasicComparisons = TestCase $ do
-  createAndImport comparisonOperations $ \output ->
-    assertEqual "Python output" output "True\nFalse\nFalse\nTrue\n"
-
+testBasicComparisons =
+  testCodeObjectOutput comparisonOperations [ "True"
+                                            , "False"
+                                            , "False"
+                                            , "True" ]
   where
     compareConstants :: Word16
                      -> Word16
@@ -223,10 +219,8 @@ testBasicComparisons = TestCase $ do
                            ]
       }
 
-testCallFunction = TestCase $ do
-  createAndImport callFunctions $ \output ->
-    assertEqual "Python output" output "400\n"
-
+testCallFunction =
+  testCodeObjectOutput callFunctions ["400"]
   where
     callFunctions :: CodeObject
     callFunctions = defaultObject
@@ -252,10 +246,8 @@ testCallFunction = TestCase $ do
                        ]
       }
 
-testMakeFunction = TestCase $ do
-  createAndImport createFunction $ \output ->
-    assertEqual "Python output" output "2448\n"
-
+testMakeFunction =
+  testCodeObjectOutput createFunction ["2448"]
   where
     createFunction :: CodeObject
     createFunction = defaultObject
