@@ -23,6 +23,34 @@ newtype PyMonad a = PyMonad (State CodeObjectState a)
 data Reference = LReference Word16
                | CReference Word16
 
+data Computation = Instruction Operation [Computation]
+                 | Load Reference
+
+newtype RunValue = RunValue (PyMonad ())
+
+loadReference :: Reference -> PyMonad ()
+loadReference (LReference x) = addOp (LOAD_FAST x)
+loadReference (CReference x) = addOp (LOAD_CONST x)
+
+evaluate :: Computation -> PyMonad RunValue
+evaluate (Instruction op computations) = return . RunValue $ do
+  load computations
+  addOp op
+
+  where
+    load :: [Computation] -> PyMonad ()
+    load [] = return ()
+    load (Load ref : xs) = loadReference ref >> load xs
+    load ((Instruction op' comps) : xs) =
+      load comps >> addOp op' >> load xs
+evaluate (Load ref) = return . RunValue $ loadReference ref
+
+sumop :: Computation -> Computation -> Computation
+sumop c1 c2 = Instruction BINARY_ADD [c1, c2]
+
+makeComp :: Reference -> Computation
+makeComp = Load
+
 defLocalVariable :: String -> PyMonad Reference
 defLocalVariable varName = do
   modify (\s -> s { localVariables = localVariables s ++ [varName] })
@@ -41,11 +69,12 @@ addOp :: Operation -> PyMonad ()
 addOp op = modify $ \s ->
   s { operations = operations s ++ [op] }
 
-printRef :: Reference -> PyMonad ()
-printRef ref = do
-  case ref of
-    LReference i -> addOp $ LOAD_FAST i
-    CReference i -> addOp $ LOAD_CONST i
+printComp :: Computation -> PyMonad ()
+printComp = evaluate >=> printValue
+
+printValue :: RunValue -> PyMonad ()
+printValue (RunValue value) = do
+  value
   addOp PRINT_EXPR
 
 createCodeObject :: PyMonad () -> CodeObject

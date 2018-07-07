@@ -19,8 +19,11 @@ library
   exposed-modules:     Types,
                        Operations,
                        Marshal,
-                       Output
-                       PyMonad
+                       Output,
+                       PyMonad,
+                       Scheme.Types,
+                       Scheme.Program
+
   build-depends:       base,
                        bytestring,
                        binary,
@@ -28,7 +31,9 @@ library
                        filepath,
                        directory,
                        time,
-                       mtl
+                       mtl,
+                       parsec,
+                       containers
 
 Test-Suite test
   type:                exitcode-stdio-1.0

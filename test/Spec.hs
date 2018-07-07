@@ -1,9 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
-
 import Test.HUnit
-
 
 import Util (withDirectory, testDirectory)
 import qualified BasicTests (tests)
