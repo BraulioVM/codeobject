@@ -1,6 +1,8 @@
 module Scheme.AST where
 
+
 import Control.Monad (forM)
+import Control.Monad.Except
 
 import Types
 import Scheme.Types
@@ -8,7 +10,7 @@ import Scheme.References
 
 resolveReferences :: FAST -> Either CompileError ResolvedProgram
 resolveReferences program =
-  Right $ getResolvedProgram (trackReferences program)
+  getResolvedProgram (trackReferences program)
   where
     trackReferences :: FAST -> ResolvedProgramM RAST
     trackReferences (FAtom x) = do
@@ -18,7 +20,7 @@ resolveReferences program =
     trackReferences (FReference str) = do
       mRef <- lookupLocalVar str
       case mRef of
-        Nothing -> error "undefined local var"
+        Nothing -> throwError CompileError
         Just ref -> return (FReference ref)
 
     trackReferences (FBegin forms) = do
@@ -33,6 +35,6 @@ resolveReferences program =
     trackReferences (FApply funcName parameters) = do
       mFuncRef <- lookupLocalVar funcName
       case mFuncRef of
-        Nothing -> error "function not defined"
+        Nothing -> throwError CompileError
         Just funcRef ->
           FApply funcRef <$> forM parameters trackReferences

@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 module Scheme.References where
 
+import Control.Monad.Except
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -27,8 +28,12 @@ data RPState = RPState
              } deriving (Show)
 
 newtype ResolvedProgramM a =
-  ResolvedProgramM (State RPState a)
-  deriving (Functor, Applicative, Monad, MonadState RPState)
+  ResolvedProgramM (ExceptT CompileError (State RPState) a)
+  deriving (Functor
+           , Applicative
+           , Monad
+           , MonadState RPState
+           , MonadError CompileError)
 
 type ConstantRef = Reference 'ReadOnly
 type MutableRef = Reference 'Writable
@@ -55,15 +60,18 @@ defineLocalVar varName = do
 
   return ref
 
-getResolvedProgram :: ResolvedProgramM RAST -> ResolvedProgram
-getResolvedProgram (ResolvedProgramM computation) =
-  ResolvedProgram  { rAST = ast
-                    , rpConstants = constants'
-                    , localVarNames = Map.keys lookupTable
-                    }
+getResolvedProgram :: ResolvedProgramM RAST
+                   -> Either CompileError ResolvedProgram
+getResolvedProgram (ResolvedProgramM computation) = do
+  ast <- eAST
+  let (RPState constants' lookupTable) = rpState
+  return $ ResolvedProgram  { rAST = ast
+                            , rpConstants = constants'
+                            , localVarNames = Map.keys lookupTable
+                            }
   where
-    (ast, (RPState constants' lookupTable)) =
-      runState computation initial
+    (eAST, rpState) =
+      runState (runExceptT computation) initial
 
     initial = RPState [] Map.empty
 

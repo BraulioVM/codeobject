@@ -13,10 +13,6 @@ testProgram =
               , ASymbol "x"
               , Atom (AInt 10)
               ]
-       , List [ ASymbol "define"
-              , ASymbol "print"
-              , ASymbol "x"
-              ]
        , List [ ASymbol "print"
               , Atom (AString "hey")
               , ASymbol "x"
