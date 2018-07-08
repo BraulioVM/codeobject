@@ -3,11 +3,9 @@
 
 module Scheme.Types where
 
-import Control.Monad (forM)
 import Control.Monad.State
 import Data.Char (isLetter, isAlphaNum)
 import Data.Map (Map)
-import qualified Data.Map as Map
 import Text.Parsec (parse)
 import Text.Parsec.Error
 import Text.Parsec.String

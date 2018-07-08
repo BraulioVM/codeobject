@@ -10,7 +10,6 @@ module Scheme.References ( Reference
 
 import Control.Monad (forM)
 import Control.Monad.State
-import Data.Map (Map)
 import qualified Data.Map as Map
 import Scheme.Types
 
@@ -33,9 +32,9 @@ getAST = rAST
 resolveReferences :: AST -> ResolvedProgram
 resolveReferences program =
   let
-    (ast, constants) = runState (trackReferences program) []
+    (ast, constants') = runState (trackReferences program) []
 
-  in ResolvedProgram { rAST = ast, rConstants = constants }
+  in ResolvedProgram { rAST = ast, rConstants = constants' }
   where
     trackReferences :: AST -> State [PyExpr] ResolvedAST
     trackReferences (Atom value) = do

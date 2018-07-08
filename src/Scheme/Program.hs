@@ -1,14 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Scheme.Program where
 
-import Control.Monad (forM)
 import Control.Monad.State
-import Data.Map (Map)
-import qualified Data.Map as Map
 
 import Scheme.Types
 import Scheme.References
-import Types
 import Operations
 
 compile :: ResolvedAST -> CodeGen ()
