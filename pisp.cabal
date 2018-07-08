@@ -22,7 +22,9 @@ library
                        Output,
                        PyMonad,
                        Scheme.Types,
-                       Scheme.Program
+                       Scheme.Program,
+                       Scheme.References,
+                       Scheme.Parser
 
   build-depends:       base,
                        bytestring,

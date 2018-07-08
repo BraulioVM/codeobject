@@ -1,83 +1,111 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Scheme.References ( Reference
                          , ResolvedAST
-                         , resolveReferences
-                         , getInitialState
-                         , storeTopOn
+                         , ResolvedProgramM
+                         , ResolvedProgram
+                         , addConstant
+                         , compileToCodeStruct
+                         , getResolvedProgram
                          , addLocalVar
                          , getLocalVarRef
-                         , getAST
-                         , putRefOnTop) where
+                         ) where
 
-import Control.Monad (forM)
 import Control.Monad.State
 import qualified Data.Map as Map
+
 import Scheme.Types
+import Scheme.References.Internal
+import Scheme.CodeStruct (CodeStruct, CodeStructM)
+import qualified Scheme.CodeStruct as Struct
 
 import Types
 import Operations
 
-data Reference = LocalVarReference Int
-               | ConstantVarReference Int
-
-type ResolvedAST = AbstractProgram Reference
 
 data ResolvedProgram = ResolvedProgram
                        { rAST :: ResolvedAST
                        , rConstants :: [PyExpr]
                        }
 
-getAST :: ResolvedProgram -> ResolvedAST
-getAST = rAST
+newtype ResolvedProgramM a =
+  ResolvedProgramM (State [PyExpr] a)
+  deriving (Functor, Applicative, Monad, MonadState [PyExpr])
 
-resolveReferences :: AST -> ResolvedProgram
-resolveReferences program =
+addConstant :: PyExpr -> ResolvedProgramM Reference
+addConstant expr = do
+  currentConstantsLength <- gets length
+  modify (++[expr])
+  
+  return (ConstantVarReference $ currentConstantsLength)
+
+getResolvedProgram :: ResolvedProgramM ResolvedAST -> ResolvedProgram
+getResolvedProgram (ResolvedProgramM computation) =
   let
-    (ast, constants') = runState (trackReferences program) []
+    (ast, constants') = runState computation []
+  in ResolvedProgram  { rAST = ast, rConstants = constants' }
 
-  in ResolvedProgram { rAST = ast, rConstants = constants' }
+
+compileToCodeStruct :: ResolvedProgram -> CodeStruct
+compileToCodeStruct (ResolvedProgram ast constants') =
+  Struct.getCodeStruct compile
   where
-    trackReferences :: AST -> State [PyExpr] ResolvedAST
-    trackReferences (Atom value) = do
-      l <- get
-      let ref = ConstantVarReference (length l)
-      put (l ++ [toPyExpr value])
+    compile :: CodeStructM ()
+    compile = do
+      registerConstants
+      compileAST ast
 
-      return (Atom ref)
-    
-    trackReferences (ASymbol sym) = do
-      return (ASymbol sym)
+    registerConstants :: CodeStructM ()
+    registerConstants = forM_ constants' Struct.addConstant
 
-    trackReferences (List exprs) = do
-      List <$> forM exprs trackReferences
+    compileAST :: ResolvedAST -> CodeStructM ()
+    compileAST (List (ASymbol "begin" : rest)) =
+      forM_ rest compileAST
 
-getInitialState :: ResolvedProgram -> CodeGenState
-getInitialState (ResolvedProgram _ rconsts) =
-  CodeGenState { localVars = Map.empty
-               , instructions = []
-               , consts = rconsts
-               }
+    compileAST (List [ASymbol "define", ASymbol var, expr]) = do
+      ref <- addLocalVar var
+      evaluateAndPutOnTop expr
+      storeTopOn ref
 
-storeTopOn :: Reference -> CodeGen ()
-storeTopOn (LocalVarReference i) =
-  addInstr (STORE_FAST $ fromIntegral i)
+    compileAST (List (ASymbol "print" : rest)) =
+      forM_  rest $ \expr -> do
+          evaluateAndPutOnTop expr
+          Struct.addInstr PRINT_EXPR
 
-putRefOnTop :: Reference -> CodeGen ()
-putRefOnTop (ConstantVarReference i) =
-  addInstr (LOAD_CONST $ fromIntegral i)
+    evaluateAndPutOnTop :: ResolvedAST -> CodeStructM ()
+    evaluateAndPutOnTop (ASymbol varName) = do
+      mRef <- getLocalVarRef varName
+      case mRef of
+        Nothing -> error ("Variable " ++ varName ++ " does not exist")
+        Just ref -> storeTopOn ref
 
-putRefOnTop (LocalVarReference i) =
-  addInstr (LOAD_FAST $ fromIntegral i)
+    evaluateAndPutOnTop (Atom ref) = putRefOnTop ref
 
-addLocalVar :: String -> CodeGen Reference
+    putRefOnTop :: Reference -> CodeStructM ()
+    putRefOnTop = Struct.addInstr . loadInstruction
+
+
+    storeTopOn :: Reference -> CodeStructM ()
+    storeTopOn (LocalVarReference i) =
+      Struct.addInstr (STORE_FAST $ fromIntegral i)
+
+loadInstruction :: Reference -> Operation
+loadInstruction (ConstantVarReference i) =
+  LOAD_CONST $ fromIntegral i
+
+loadInstruction (LocalVarReference i) =
+  LOAD_FAST $ fromIntegral i
+
+addLocalVar :: String -> CodeStructM Reference
 addLocalVar str = do
-  lVars <- gets localVars
+  lVars <- gets Struct.localVars
   let newVarId = Map.size lVars
 
-  modify (\s -> s { localVars = Map.insert str newVarId lVars }) 
+  modify (\s -> s { Struct.localVars = Map.insert str newVarId lVars }) 
 
   return (LocalVarReference newVarId)
 
-getLocalVarRef :: String -> CodeGen (Maybe Reference)
+getLocalVarRef :: String -> CodeStructM (Maybe Reference)
 getLocalVarRef varName = do
-  lVars <- gets localVars
+  lVars <- gets Struct.localVars
   return (LocalVarReference <$> Map.lookup varName lVars)
+
