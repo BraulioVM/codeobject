@@ -1,3 +1,3 @@
-module Scheme.References.Types (Reference) where
+module Scheme.References.Types (Reference, ReferenceType(..)) where
 
 import Scheme.References.Internal

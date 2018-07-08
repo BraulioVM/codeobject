@@ -6,17 +6,33 @@ import Types
 import Scheme.Types
 import Scheme.References
 
-resolveReferences :: AST -> ResolvedProgram
+resolveReferences :: FAST -> Either CompileError ResolvedProgram
 resolveReferences program =
-  getResolvedProgram (trackReferences program)
+  Right $ getResolvedProgram (trackReferences program)
   where
-    trackReferences :: AST -> ResolvedProgramM ResolvedAST
-    trackReferences (Atom x) = do
+    trackReferences :: FAST -> ResolvedProgramM RAST
+    trackReferences (FAtom x) = do
       ref <- addConstant (toPyExpr x)
-      return (Atom ref)
-  
-    trackReferences (ASymbol str) =
-      return (ASymbol str)
+      return (FAtom ref)
+      
+    trackReferences (FReference str) = do
+      mRef <- lookupLocalVar str
+      case mRef of
+        Nothing -> error "undefined local var"
+        Just ref -> return (FReference ref)
 
-    trackReferences (List exprs) =
-      List <$> forM exprs trackReferences
+    trackReferences (FBegin forms) = do
+      FBegin <$> forM forms trackReferences
+
+    trackReferences (FDefine varName expr) = do
+      -- don't allow circular references
+      resolvedExpr <- trackReferences expr
+      ref <- defineLocalVar varName
+      return (FDefine ref resolvedExpr)
+
+    trackReferences (FApply funcName parameters) = do
+      mFuncRef <- lookupLocalVar funcName
+      case mFuncRef of
+        Nothing -> error "function not defined"
+        Just funcRef ->
+          FApply funcRef <$> forM parameters trackReferences
