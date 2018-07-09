@@ -5,6 +5,11 @@ import Scheme.Types
 import Scheme.References
 import Scheme.CodeStruct
 import Scheme.AST
+import Scheme.Parser
+
+astToCodeStruct :: AST -> Either CompileError CodeStruct
+astToCodeStruct ast =
+  parseStandardForms ast >>= resolveReferences >>= compileToCodeStruct
 
 testProgram :: AST
 testProgram = 
@@ -13,9 +18,13 @@ testProgram =
               , ASymbol "x"
               , Atom (AInt 10)
               ]
-       , List [ ASymbol "print"
-              , Atom (AString "hey")
+       , List [ ASymbol "define"
+              , ASymbol "print"
               , ASymbol "x"
               ]
+       -- , List [ ASymbol "print"
+       --        , Atom (AString "hey")
+       --        , ASymbol "x"
+       --        ]
        ]
                 

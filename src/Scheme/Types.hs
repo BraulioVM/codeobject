@@ -31,6 +31,7 @@ deriving instance (Show ref, Show const) => Show (StandardForm ref const)
 data CompileError = ReservedWordSyntaxError
                   | UnknownSyntax
                   | UndefinedVariable String
+                  | UnimplementedFeature String
                   
   deriving (Show)
 

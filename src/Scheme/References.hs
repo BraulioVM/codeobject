@@ -7,6 +7,8 @@ import Control.Monad.Except
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as Map
+import GHC.Exts
+
 
 import Scheme.Types
 import Scheme.References.Internal
@@ -67,7 +69,7 @@ getResolvedProgram (ResolvedProgramM computation) = do
   let (RPState constants' lookupTable) = rpState
   return $ ResolvedProgram  { rAST = ast
                             , rpConstants = constants'
-                            , localVarNames = Map.keys lookupTable
+                            , localVarNames = (getLocalVarNames lookupTable)
                             }
   where
     (eAST, rpState) =
@@ -75,67 +77,75 @@ getResolvedProgram (ResolvedProgramM computation) = do
 
     initial = RPState [] Map.empty
 
--- compileToCodeStruct :: ResolvedProgram -> CodeStruct
--- compileToCodeStruct (ResolvedProgram ast constants') =
---   Struct.getCodeStruct compile
---   where
---     compile :: CodeStructM ()
---     compile = do
---       registerConstants
---       compileAST ast
+    getLocalVarNames :: Map String MutableRef -> [String]
+    getLocalVarNames table =
+      fst <$> sortedItems
+      where
+        sortedItems = sortWith snd (Map.toList table) 
+    
 
---     registerConstants :: CodeStructM ()
---     registerConstants = forM_ constants' Struct.addConstant
+compileToCodeStruct :: ResolvedProgram -> Either CompileError CodeStruct
+compileToCodeStruct (ResolvedProgram ast constants' localVars) = do
+  Struct.getCodeStruct compile
 
---     compileAST :: ResolvedAST -> CodeStructM ()
---     compileAST (List (ASymbol "begin" : rest)) =
---       forM_ rest compileAST
+  where
+    compile :: CodeStructM ()
+    compile = do
+      registerConstants
+      registerLocalVariables
+      compileAST ast
 
---     compileAST (List [ASymbol "define", ASymbol var, expr]) = do
---       ref <- addLocalVar var
---       evaluateAndPutOnTop expr
---       storeTopOn ref
+    registerConstants :: CodeStructM ()
+    registerConstants = forM_ constants' Struct.addConstant
 
---     compileAST (List (ASymbol "print" : rest)) =
---       forM_  rest $ \expr -> do
---           evaluateAndPutOnTop expr
---           Struct.addInstr PRINT_EXPR
+    registerLocalVariables :: CodeStructM ()
+    registerLocalVariables = forM_ localVars Struct.addVariable
 
---     evaluateAndPutOnTop :: ResolvedAST -> CodeStructM ()
---     evaluateAndPutOnTop (ASymbol varName) = do
---       mRef <- getLocalVarRef varName
---       case mRef of
---         Nothing -> error ("Variable " ++ varName ++ " does not exist")
---         Just ref -> storeTopOn ref
+    compileAST :: RAST -> CodeStructM ()
+    compileAST (FAtom _) = return ()
+    compileAST (FReference _) = return ()
 
---     evaluateAndPutOnTop (Atom ref) = putRefOnTop ref
+    compileAST (FBegin rest) = do
+      forM_ rest compileAST
 
---     putRefOnTop :: Reference a -> CodeStructM ()
---     putRefOnTop = Struct.addInstr . loadInstruction
+    compileAST (FDefine ref expr) = do
+      evaluateAndPutOnTop expr
+      storeTopOn ref
 
+    compileAST _ = throwError (UnimplementedFeature "function calls")
 
---     storeTopOn :: Reference 'Writable -> CodeStructM ()
---     storeTopOn (LocalVarReference i) =
---       Struct.addInstr (STORE_FAST $ fromIntegral i)
+    -- compileAST (FApply (ASymbol "print" : rest)) =
+    --   forM_  rest $ \expr -> do
+    --       evaluateAndPutOnTop expr
+    --       Struct.addInstr PRINT_EXPR
 
--- loadInstruction :: Reference a -> Operation
--- loadInstruction (ConstantVarReference i) =
---   LOAD_CONST $ fromIntegral i
+    evaluateAndPutOnTop :: RAST -> CodeStructM ()
+    evaluateAndPutOnTop (FAtom ref) = putRefOnTop ref
+    evaluateAndPutOnTop (FReference ref) = putRefOnTop ref
+    evaluateAndPutOnTop (FBegin rest) = do
+      putLastOnTop rest
+      where
+        putLastOnTop :: [RAST] -> CodeStructM ()
+        putLastOnTop [] = return ()
+        putLastOnTop [x] = evaluateAndPutOnTop x
+        putLastOnTop (x:xs) = compileAST x >> putLastOnTop xs
+    
+    evaluateAndPutOnTop a@(FDefine ref _) = do
+      compileAST a
+      putRefOnTop ref
 
--- loadInstruction (LocalVarReference i) =
---   LOAD_FAST $ fromIntegral i
+    evaluateAndPutOnTop _ = throwError (UnimplementedFeature "calls")
 
--- addLocalVar :: String -> CodeStructM (Reference 'Writable)
--- addLocalVar str = do
---   lVars <- gets Struct.localVars
---   let newVarId = Map.size lVars
+    putRefOnTop :: Reference a -> CodeStructM ()
+    putRefOnTop = Struct.addInstr . loadInstruction
 
---   modify (\s -> s { Struct.localVars = Map.insert str newVarId lVars }) 
+    storeTopOn :: Reference 'Writable -> CodeStructM ()
+    storeTopOn (LocalVarReference i) =
+      Struct.addInstr (STORE_FAST $ fromIntegral i)
 
---   return (LocalVarReference newVarId)
+loadInstruction :: Reference a -> Operation
+loadInstruction (ConstantVarReference i) =
+  LOAD_CONST $ fromIntegral i
 
--- getLocalVarRef :: String -> CodeStructM (Maybe (Reference 'Writable))
--- getLocalVarRef varName = do
---   lVars <- gets Struct.localVars
---   return (LocalVarReference <$> Map.lookup varName lVars)
-
+loadInstruction (LocalVarReference i) =
+  LOAD_FAST $ fromIntegral i

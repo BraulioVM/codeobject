@@ -1,35 +1,40 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Scheme.CodeStruct where
 
+import Control.Monad.Except
 import Control.Monad.State
-import Data.Map (Map)
-import qualified Data.Map as Map
 
-
+import Scheme.Types
 import Operations
 import Types
 
 data CodeStruct = CodeStruct
-                    { localVars :: Map String Int
+                    { localVars :: [String]
                     , instructions :: [Operation]
                     , consts :: [PyExpr]
                     } deriving (Show)
 
 emptyCodeStruct :: CodeStruct
 emptyCodeStruct = CodeStruct
-  { localVars = Map.empty
+  { localVars = []
   , instructions = []
   , consts = []
   }
   
 newtype CodeStructM a = CodeStructM
-  { unCodeStruct :: State CodeStruct a
+  { unCodeStruct :: ExceptT CompileError (State CodeStruct) a
   }
-  deriving (Functor, Applicative, Monad, MonadState CodeStruct)
+  deriving (Functor,
+            Applicative, Monad,
+            MonadState CodeStruct,
+            MonadError CompileError)
 
-getCodeStruct :: CodeStructM () -> CodeStruct
+getCodeStruct :: CodeStructM () -> Either CompileError CodeStruct
 getCodeStruct (CodeStructM computation) =
-  execState computation emptyCodeStruct 
+  eResult >> return codeStruct
+  where
+    (eResult, codeStruct) =
+      runState (runExceptT computation) emptyCodeStruct 
 
 addInstr :: Operation -> CodeStructM ()
 addInstr op = do
@@ -40,3 +45,8 @@ addConstant :: PyExpr -> CodeStructM ()
 addConstant pyexpr = do
   consts' <- gets consts
   modify (\s -> s { consts = consts' ++ [pyexpr] })
+
+addVariable :: String -> CodeStructM ()
+addVariable varName = do
+  vars <- gets localVars
+  modify (\s -> s { localVars = vars ++ [varName] })
