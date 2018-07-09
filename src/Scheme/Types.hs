@@ -28,7 +28,10 @@ data StandardForm reference constant
 deriving instance (Show a) => Show (AbstractProgram a)
 deriving instance (Show ref, Show const) => Show (StandardForm ref const)
 
-data CompileError = CompileError
+data CompileError = ReservedWordSyntaxError
+                  | UnknownSyntax
+                  | UndefinedVariable String
+                  
   deriving (Show)
 
 type AST = AbstractProgram BasicValue

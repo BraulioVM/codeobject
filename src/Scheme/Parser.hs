@@ -53,9 +53,9 @@ parseLang = parse (astParser <* eof) "<stdin>"
 parseStandardForms :: AST -> Either CompileError FAST
 parseStandardForms (Atom a) = Right (FAtom a)
 parseStandardForms (ASymbol s)
-  | s == "define" = Left CompileError
-  | s == "begin" = Left CompileError
-  | s == "lambda" = Left CompileError
+  | s == "define" = Left ReservedWordSyntaxError
+  | s == "begin" = Left ReservedWordSyntaxError
+  | s == "lambda" = Left ReservedWordSyntaxError
   | otherwise = Right (FReference s)
 parseStandardForms (List [ASymbol "define", ASymbol var, expr])
   = FDefine var <$> parseStandardForms expr
@@ -64,4 +64,4 @@ parseStandardForms (List (ASymbol "begin":rest))
 parseStandardForms (List (ASymbol x:rest))
   = FApply x <$> traverse parseStandardForms rest
 
-parseStandardForms _ = Left CompileError
+parseStandardForms _ = Left UnknownSyntax

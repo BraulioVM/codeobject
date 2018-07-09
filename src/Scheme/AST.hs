@@ -20,7 +20,7 @@ resolveReferences program =
     trackReferences (FReference str) = do
       mRef <- lookupLocalVar str
       case mRef of
-        Nothing -> throwError CompileError
+        Nothing -> throwError (UndefinedVariable str)
         Just ref -> return (FReference ref)
 
     trackReferences (FBegin forms) = do
@@ -35,6 +35,6 @@ resolveReferences program =
     trackReferences (FApply funcName parameters) = do
       mFuncRef <- lookupLocalVar funcName
       case mFuncRef of
-        Nothing -> throwError CompileError
+        Nothing -> throwError (UndefinedVariable funcName)
         Just funcRef ->
           FApply funcRef <$> forM parameters trackReferences
