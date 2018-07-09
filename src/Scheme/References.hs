@@ -112,7 +112,7 @@ compileToCodeStruct (ResolvedProgram ast constants' localVars) = do
       evaluateAndPutOnTop expr
       storeTopOn ref
 
-    compileAST _ = throwError (UnimplementedFeature "function calls")
+    compileAST _ = throwError (NotImplemented "function calls")
 
     -- compileAST (FApply (ASymbol "print" : rest)) =
     --   forM_  rest $ \expr -> do
@@ -134,7 +134,7 @@ compileToCodeStruct (ResolvedProgram ast constants' localVars) = do
       compileAST a
       putRefOnTop ref
 
-    evaluateAndPutOnTop _ = throwError (UnimplementedFeature "calls")
+    evaluateAndPutOnTop _ = throwError (NotImplemented "calls")
 
     putRefOnTop :: Reference a -> CodeStructM ()
     putRefOnTop = Struct.addInstr . loadInstruction

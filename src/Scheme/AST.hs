@@ -38,3 +38,5 @@ resolveReferences program =
         Nothing -> throwError (UndefinedVariable funcName)
         Just funcRef ->
           FApply funcRef <$> forM parameters trackReferences
+
+    trackReferences _ = throwError (NotImplemented "lambdas")

@@ -61,6 +61,17 @@ parseStandardForms (List [ASymbol "define", ASymbol var, expr])
   = FDefine var <$> parseStandardForms expr
 parseStandardForms (List (ASymbol "begin":rest))
   = FBegin <$> traverse parseStandardForms rest
+
+parseStandardForms (List [ ASymbol "lambda"
+                         , List parameters
+                         , body ]) =
+  FLambda
+  <$> traverse isSymbol parameters
+  <*> parseStandardForms body
+  where
+    isSymbol (ASymbol s) = Right s
+    isSymbol _ = Left IncorrectParameterList
+
 parseStandardForms (List (ASymbol x:rest))
   = FApply x <$> traverse parseStandardForms rest
 

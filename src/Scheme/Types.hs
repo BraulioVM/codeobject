@@ -8,7 +8,7 @@ import Types
 
 data BasicValue = AInt Int
                 | AString String
-               deriving (Show)
+               deriving (Show, Eq)
 
 instance ToPyExpr BasicValue where
   toPyExpr (AInt x) = PyInt x
@@ -24,16 +24,18 @@ data StandardForm reference constant
   | FBegin [StandardForm reference constant]
   | FDefine reference (StandardForm reference constant)
   | FApply reference [StandardForm reference constant]
+  | FLambda [reference] (StandardForm reference constant)
 
 deriving instance (Show a) => Show (AbstractProgram a)
 deriving instance (Show ref, Show const) => Show (StandardForm ref const)
+deriving instance (Eq ref, Eq const) => Eq (StandardForm ref const)
 
 data CompileError = ReservedWordSyntaxError
                   | UnknownSyntax
+                  | IncorrectParameterList
                   | UndefinedVariable String
-                  | UnimplementedFeature String
-                  
-  deriving (Show)
+                  | NotImplemented String
+  deriving (Show, Eq)
 
 type AST = AbstractProgram BasicValue
 type FAST = StandardForm String BasicValue

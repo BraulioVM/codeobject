@@ -56,5 +56,6 @@ Test-Suite test
                        mtl
   other-modules:       Util,
                        BasicTests,
-                       TestPyMonad
+                       TestPyMonad,
+                       SchemeParserTests
   
