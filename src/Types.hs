@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Types where
 
 import Data.ByteString
@@ -8,8 +9,8 @@ import Operations
 -- marshalled as a python tuple.
 newtype PTuple a = PTuple [a]
 
-instance Show a => Show (PTuple a) where
-  show (PTuple as) = "PTuple " ++ show as
+deriving instance (Show a) => Show (PTuple a)
+deriving instance (Eq a) => Eq (PTuple a)
 
 unPTuple :: PTuple a -> [a]
 unPTuple (PTuple as) = as
@@ -23,7 +24,7 @@ data PyExpr = PyNone -- ^ None value
             | PyBool Bool -- ^ A python boolean
             | PyTuple [PyExpr] -- ^ A python tuple
             | PyCodeObject CodeObject -- ^ A python code object
-            deriving (Show)
+            deriving (Show, Eq)
 
 class ToPyExpr a where
   toPyExpr :: a -> PyExpr
@@ -69,7 +70,7 @@ data CodeObject = CodeObject
   , freeVars :: PTuple String -- ^ Variables used in the function
                               -- that are neither local nor global 
   , cellVars :: PTuple String  -- ^ Local variables used by inner functions
-  } deriving (Show)
+  } deriving (Show, Eq)
 
 
 -- | A good value to build simple code objects from

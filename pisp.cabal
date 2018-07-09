@@ -53,9 +53,12 @@ Test-Suite test
                        bytestring,
                        time,
                        process,
-                       mtl
+                       mtl,
+                       containers
   other-modules:       Util,
                        BasicTests,
                        TestPyMonad,
-                       SchemeParserTests
+                       SchemeParserTests,
+                       ResolvedProgramTests
+                      
   

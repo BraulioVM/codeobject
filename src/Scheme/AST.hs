@@ -12,13 +12,13 @@ resolveReferences :: FAST -> Either CompileError ResolvedProgram
 resolveReferences program =
   getResolvedProgram (trackReferences program)
   where
-    trackReferences :: FAST -> ResolvedProgramM RAST
+    trackReferences :: FAST -> ResolvedProgramM NRAST
     trackReferences (FAtom x) = do
-      ref <- addConstant (toPyExpr x)
+      ref <- addConstExprToScope (toPyExpr x)
       return (FAtom ref)
       
     trackReferences (FReference str) = do
-      mRef <- lookupLocalVar str
+      mRef <- lookupVar str
       case mRef of
         Nothing -> throwError (UndefinedVariable str)
         Just ref -> return (FReference ref)
@@ -33,10 +33,12 @@ resolveReferences program =
       return (FDefine ref resolvedExpr)
 
     trackReferences (FApply funcName parameters) = do
-      mFuncRef <- lookupLocalVar funcName
+      mFuncRef <- lookupVar funcName
       case mFuncRef of
         Nothing -> throwError (UndefinedVariable funcName)
         Just funcRef ->
           FApply funcRef <$> forM parameters trackReferences
 
-    trackReferences _ = throwError (NotImplemented "lambdas")
+    trackReferences (FLambda params code) = do
+      ref <- withNewScope params (trackReferences code) 
+      return (FAtom ref)

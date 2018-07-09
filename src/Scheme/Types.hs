@@ -35,12 +35,16 @@ data CompileError = ReservedWordSyntaxError
                   | IncorrectParameterList
                   | UndefinedVariable String
                   | NotImplemented String
+                  | ScopeError
   deriving (Show, Eq)
 
 type AST = AbstractProgram BasicValue
 type FAST = StandardForm String BasicValue
 
+type NRAST = StandardForm (NReference 'Writable) (Reference 'ReadOnly)
 type RAST = StandardForm (Reference 'Writable) (Reference 'ReadOnly)
+
+
 type ResolvedAST = AbstractProgram (Reference 'ReadOnly)
 
 
