@@ -25,7 +25,10 @@ library
                        Scheme.Program,
                        Scheme.References,
                        Scheme.Parser,
-                       Scheme.AST
+                       Scheme.AST,
+                       Scheme.References.Types,
+                       Scheme.References.Internal,
+                       Scheme.CodeStruct
 
   build-depends:       base,
                        bytestring,
