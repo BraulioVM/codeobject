@@ -42,6 +42,8 @@ type AST = AbstractProgram BasicValue
 type FAST = StandardForm String BasicValue
 
 type NRAST = StandardForm (NReference 'Writable) (Reference 'ReadOnly)
+type NamedAST = StandardForm String (Reference 'ReadOnly)
+
 type RAST = StandardForm (Reference 'Writable) (Reference 'ReadOnly)
 
 

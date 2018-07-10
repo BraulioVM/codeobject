@@ -12,7 +12,7 @@ resolveReferences :: FAST -> Either CompileError ResolvedProgram
 resolveReferences program =
   getResolvedProgram (trackReferences program)
   where
-    trackReferences :: FAST -> ResolvedProgramM NRAST
+    trackReferences :: FAST -> ResolvedProgramM NamedAST
     trackReferences (FAtom x) = do
       ref <- addConstExprToScope (toPyExpr x)
       return (FAtom ref)
@@ -21,7 +21,7 @@ resolveReferences program =
       mRef <- lookupVar str
       case mRef of
         Nothing -> throwError (UndefinedVariable str)
-        Just ref -> return (FReference ref)
+        Just _ -> return (FReference str)
 
     trackReferences (FBegin forms) = do
       FBegin <$> forM forms trackReferences

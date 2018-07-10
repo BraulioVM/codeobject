@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Scheme.References where
 
 import Control.Monad.Except
@@ -33,7 +34,7 @@ type MutableRef = NReference 'Writable
 
 type LookupTable = Map String MutableRef
 
-data Function = Function { fAST :: NRAST
+data Function = Function { fAST :: NamedAST
                          , fScopeState :: ScopeState
                          } deriving (Show, Eq)
 
@@ -88,7 +89,7 @@ addConstantToScope expr = do
     innerNewConstantId =
       length . ssConstants . innerScope
 
-lookupVar :: String -> ResolvedProgramM (Maybe MutableRef)
+lookupVar :: String -> ResolvedProgramM (Maybe String)
 lookupVar varName = do
   currentPtr <- get
   mResult <- recursiveLookup varName currentPtr True
@@ -101,7 +102,7 @@ lookupVar varName = do
           newPtr' = updateInnerState (\ss -> ss { ssLocalTable = newLocalTable }) newPtr
 
       put newPtr'
-      return (Just ref)
+      return (Just varName)
 
   where
     localLookup :: String
@@ -156,30 +157,30 @@ lookupVar varName = do
           return $ Just (newPtr, FreeVarReference name)
 
 withNewScope :: [ref]
-             -> ResolvedProgramM NRAST
+             -> ResolvedProgramM NamedAST
              -> ResolvedProgramM ConstantRef
 withNewScope _ act = do
   modify (\scopePtr -> Inner emptySS scopePtr)
-  rast <- act
+  namedAst <- act
   scopePtr <- get
     
   case scopePtr of
     Top _ -> throwError ScopeError
     Inner ss parent -> do
-      let function = Function rast ss
+      let function = Function namedAst ss
       put parent
       addConstantToScope (Right function)
 
   where
     emptySS = ScopeState [] Map.empty
 
-defineLocalVar :: String -> ResolvedProgramM MutableRef
+defineLocalVar :: String -> ResolvedProgramM String
 defineLocalVar varName = do
   let ref = LocalVarReference varName
   
   modify (insertRef ref)
 
-  return ref
+  return varName
   where
     insertRef :: MutableRef -> ScopePtr -> ScopePtr
     insertRef ref =
@@ -189,41 +190,85 @@ defineLocalVar varName = do
                              ref
                              (ssLocalTable ss)
                            })
-getResolvedProgram :: ResolvedProgramM NRAST
+getResolvedProgram :: ResolvedProgramM NamedAST
                    -> Either CompileError ResolvedProgram
 getResolvedProgram (ResolvedProgramM computation) = do
   ast <- eAST
   let (ScopeState constants' localTable) = innerScope scopePtr
+  nrast <- fixVariableReferences (innerScope scopePtr) ast
 
-  let scope =
-        scopeFromLocalTable ast constants' localTable
+  scope <- scopeFromLocalTable nrast constants' localTable
 
   return (ResolvedProgram scope)
   where
     (eAST, scopePtr) =
       runState (runExceptT computation) initial
 
+    fixVariableReferences :: ScopeState
+                          -> NamedAST
+                          -> Either CompileError NRAST
+    fixVariableReferences _ (FAtom constant) =
+      return (FAtom constant)
+
+    fixVariableReferences ss (FReference ref) = do
+      case (Map.lookup ref (ssLocalTable ss)) of
+        Nothing -> Left (UndefinedVariable ref)
+        Just var -> return (FReference var)
+    
+    fixVariableReferences ss (FBegin rest) =
+      FBegin <$> forM rest (fixVariableReferences ss)
+
+    fixVariableReferences ss (FDefine varName expr) = do
+      case Map.lookup varName (ssLocalTable ss) of
+        Nothing -> Left (UndefinedVariable varName)
+        Just var -> do
+          fixedExpr <- fixVariableReferences ss expr
+          Right (FDefine var fixedExpr)
+
+    fixVariableReferences ss (FApply funcName args) = do
+      case Map.lookup funcName (ssLocalTable ss) of
+        Nothing -> Left (UndefinedVariable funcName)
+        Just fRef -> do
+          fixedArgs <- forM args (fixVariableReferences ss)
+          return (FApply fRef fixedArgs)
+    
+    fixVariableReferences _ _ = Left ScopeError
+    
+    d :: Either PyExpr (Either CompileError Scope)
+      -> Either CompileError (Either PyExpr Scope)
+    d (Left a) = Right (Left a)
+    d (Right (Left a)) = Left a
+    d (Right (Right a)) = Right (Right a)
+
     scopeFromLocalTable :: NRAST
                         -> [Either PyExpr Function]
                         -> LookupTable
-                        -> Scope
-    scopeFromLocalTable ast' consts localTable = Scope
-      { scopeAST = ast'
-      , scopeConstants = (fmap recConstants) <$> consts
-      , scopeLocalVariables = Map.filter isLocal localTable
-      , scopeCellVariables = Map.filter isCell localTable
-      , scopeFreeVariables = Map.filter isFree localTable
-      }
+                        -> Either CompileError Scope
+    scopeFromLocalTable ast' consts localTable = do
+      let (theConstants :: [Either PyExpr (Either CompileError Scope)]) =
+            (fmap functionToScope) <$> consts
+      
+      theConstants' <- sequence (fmap d theConstants)
+      
+
+      return $ Scope
+        { scopeAST = ast'
+        , scopeConstants = theConstants'
+        , scopeLocalVariables = Map.filter isLocal localTable
+        , scopeCellVariables = Map.filter isCell localTable
+        , scopeFreeVariables = Map.filter isFree localTable
+        }
+      where
+        functionToScope :: Function -> Either CompileError Scope
+        functionToScope (Function namedAST ss) = do
+          nrast <- fixVariableReferences ss namedAST
+          scopeFromLocalTable nrast (ssConstants ss) (ssLocalTable ss)
 
     initial :: ScopePtr
     initial = Top $ ScopeState
       { ssConstants = []
       , ssLocalTable = Map.empty
       }
-
-    recConstants :: Function -> Scope
-    recConstants (Function ast ss) =
-      scopeFromLocalTable ast (ssConstants ss) (ssLocalTable ss)
 
 -- compileToCodeStruct :: ResolvedProgram -> Either CompileError CodeStruct
 -- compileToCodeStruct (ResolvedProgram ast constants' localVars) = do
