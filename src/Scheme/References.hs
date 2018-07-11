@@ -66,62 +66,54 @@ requireVar :: String -> ScopeM ReferenceScope
 requireVar varName = do
   scopePtr <- get
 
-  case scopePtr of
-    Top ss -> do
-      let mRef = localLookup varName ss
-      case mRef of
+  let mLocalRef = localLookup varName (innerScope scopePtr)
+  case mLocalRef of
+    Just ref ->
+      return ref
+    Nothing -> do
+      case performOnParent (recursiveLookup' varName) scopePtr of
         Nothing -> throwError (UndefinedVariable varName)
-        Just ref -> return ref
+        Just newPtr -> do
+          put newPtr
+          localRegisterVar varName FreeScope
+          return FreeScope
 
-    Inner ss parent -> do
-      let mRef = localLookup varName ss
-      case mRef of
-        Nothing -> do
-          case recursiveLookup varName parent of
-            Nothing -> throwError (UndefinedVariable varName)
-            Just (newPtr, ref) -> do
-              put newPtr
-              localRegisterVar varName ref
-              return ref
-        Just ref ->
-          return ref
 
   where
+    performOnParent :: (ScopePtr -> Maybe a) -> ScopePtr -> Maybe a
+    performOnParent f (Inner _ parent) = f parent
+    performOnParent f (Top _) = Nothing
+
+    foldUp :: (Alternative f) => (ScopePtr -> f ScopePtr)
+           -> ScopePtr -> f ScopePtr
+    foldUp f ptr@(Top _) = f ptr
+    foldUp f ptr@(Inner ss parent) = f ptr <|>
+                                     (Inner ss <$> foldUp f parent)
+
+    
+    recursiveLookup' :: String -> ScopePtr -> Maybe ScopePtr
+    recursiveLookup' varN ptr =
+      foldUp localLookupAndTransform ptr
+      where
+        localLookupAndTransform :: ScopePtr
+                                -> Maybe ScopePtr
+        localLookupAndTransform ptr = do
+          ref <- localLookup varN (innerScope ptr)
+          case ref of
+            LocalScope -> return (updateInnerScope markCellVar ptr)
+            _ -> return ptr
+          
+        markCellVar :: ScopeState -> ScopeState
+        markCellVar ss  =
+          let table = ssTable ss
+              newTable = Map.insert varN CellScope table
+          in ss { ssTable = newTable  }
+
+
     localLookup :: String -> ScopeState -> Maybe ReferenceScope
     localLookup varN ss =
       let table = ssTable ss
       in Map.lookup varN table
-
-    recursiveLookup :: String
-                    -> ScopePtr
-                    -> Maybe (ScopePtr, ReferenceScope)
-    recursiveLookup varN (Top ss) = do
-      case localLookup varN ss of
-        Nothing -> Nothing
-        Just ref -> Just
-          (Top $ updateReferenceScope ss varN ref, FreeScope)
-      
-    recursiveLookup varN (Inner ss parent) =
-      case localLookup varN ss of
-        Nothing -> do
-          (newParent, ref) <- recursiveLookup varN parent
-          return (Inner ss newParent, ref)
-        Just ref -> Just
-          (flip Inner parent $
-            updateReferenceScope ss varN ref, FreeScope)
-            
-    updateReferenceScope :: ScopeState 
-                         -> String
-                         -> ReferenceScope
-                         -> ScopeState
-    updateReferenceScope innerSS varN ref =
-      case ref of
-        CellScope -> innerSS
-        FreeScope -> innerSS
-        LocalScope -> 
-          let table = ssTable innerSS
-              newTable = Map.insert varN CellScope table
-          in innerSS { ssTable = newTable }
 
 -- resolveScopes :: FAST -> Either CompileError Scope
 -- resolveScopes = 
