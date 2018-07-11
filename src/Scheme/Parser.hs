@@ -72,7 +72,7 @@ parseStandardForms (List [ ASymbol "lambda"
     isSymbol (ASymbol s) = Right s
     isSymbol _ = Left IncorrectParameterList
 
-parseStandardForms (List (ASymbol x:rest))
-  = FApply x <$> traverse parseStandardForms rest
+parseStandardForms (List (x:rest))
+  = FApply <$> (parseStandardForms x) <*> traverse parseStandardForms rest
 
 parseStandardForms _ = Left UnknownSyntax
