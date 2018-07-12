@@ -9,8 +9,6 @@ import Scheme.References
 import Scheme.Types
 import Scheme.AST
 
-import Types
-
 testNestedLambdas :: Test
 testNestedLambdas = TestCase $ do
   assertEqual "resolved program" (resolveReferences program) resolved
@@ -31,69 +29,54 @@ testNestedLambdas = TestCase $ do
       )
 
     resolved = Right
-      (ResolvedProgram $ Scope 
-        { scopeAST = FAtom (ConstantVarReference 0)
+      (Scope 
+        { scopeCode = FAtom (ConstantVarReference 0)
         , scopeConstants =
-            [ Right $ Scope
-              { scopeAST =
+            [ Left $ Scope
+              { scopeCode =
                   FBegin
-                  [ FDefine (CellVarReference "z")
+                  [ FDefine "z"
                     (FAtom $ ConstantVarReference 0)
-                  , FDefine (LocalVarReference "local")
+                  , FDefine "local"
                     (FAtom $ ConstantVarReference 1)
                   , FAtom (ConstantVarReference 2)
                   ]
               , scopeConstants =
-                [ Left (PyInt 5)
-                , Left (PyInt 6)
-                , Right $ Scope
-                  { scopeAST =
+                [ Right (AInt 5)
+                , Right (AInt 6)
+                , Left $ Scope
+                  { scopeCode =
                       FBegin
-                      [ FDefine (CellVarReference "l")
-                        (FReference $ FreeVarReference "z")
+                      [ FDefine "l"
+                        (FReference "z")
                       , FAtom (ConstantVarReference 0)
                       ]
                   , scopeConstants =
                     [
-                      Right $ Scope
-                      { scopeAST =
-                          FDefine (LocalVarReference "y")
-                          (FReference (FreeVarReference "l"))
+                      Left $ Scope
+                      { scopeCode =
+                          FDefine "y"
+                          (FReference "l")
                       , scopeConstants = []
-                      , scopeLocalVariables = Map.fromList
-                        [ ("y", LocalVarReference "y")
-                        ]
-                      , scopeCellVariables = Map.fromList []
-                      , scopeFreeVariables = Map.fromList
-                        [ ("l", FreeVarReference "l")
-                        ]
+                      , scopeVars = Map.fromList
+                                    [ ("y", LocalScope)
+                                    , ("l", FreeScope)
+                                    ]
                       }
                     ]
-                  , scopeLocalVariables = Map.fromList
-                    [ 
-                    ]
-                  , scopeCellVariables = Map.fromList
-                    [ ("l", CellVarReference "l")
-                    ]
-                  , scopeFreeVariables = Map.fromList
-                    [ ("z", FreeVarReference "z")
-                    ]
+                  , scopeVars = Map.fromList
+                                [ ("l", CellScope)
+                                , ("z", FreeScope)
+                                ]
                   }
                 ]
-              , scopeLocalVariables = Map.fromList
-                [ ("local", LocalVarReference "local")
-                ]
-              , scopeFreeVariables = Map.fromList
-                [
-                ]
-              , scopeCellVariables = Map.fromList
-                [ ("z", CellVarReference "z")
-                ]
+              , scopeVars = Map.fromList
+                            [ ("local", LocalScope)
+                            , ("z", CellScope)
+                            ]
               }
             ]
-        , scopeLocalVariables = Map.empty
-        , scopeCellVariables = Map.empty
-        , scopeFreeVariables = Map.empty
+        , scopeVars = Map.empty
         }
       )
 

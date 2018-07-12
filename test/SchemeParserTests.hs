@@ -31,7 +31,7 @@ testFApply = TestCase $
   assertEqual "parsed form" (parseStandardForms ast) standardForms
   where
     ast = List [ ASymbol "f" ]
-    standardForms = Right $ FApply "f" []
+    standardForms = Right $ FApply (FReference "f") []
 
 testLambda :: Test
 testLambda = TestCase $
@@ -47,9 +47,10 @@ testLambda = TestCase $
                       ]
                ]
     standardForms = Right $ (FLambda ["x", "y"]
-                              (FApply "f" [ FReference "x"
-                                          , FReference "y"
-                                          ]
+                              (FApply (FReference "f")
+                                [ FReference "x"
+                                , FReference "y"
+                                ]
                               )
                             )
       

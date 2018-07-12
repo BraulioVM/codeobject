@@ -2,9 +2,7 @@
 module Scheme.AST where
 
 import Control.Monad (forM)
-import Control.Monad.Except
 
-import Types
 import Scheme.Types
 import Scheme.References
 
@@ -18,7 +16,7 @@ resolveReferences program =
       return (FAtom constRef)
       
     trackReferences (FReference str) = do
-      mRef <- requireVar str
+      _ <- requireVar str
       return (FReference str)
 
     trackReferences (FBegin forms) = do

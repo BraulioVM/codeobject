@@ -8,14 +8,15 @@ module Scheme.References where
 import Control.Applicative
 import Control.Monad.Except
 import Control.Monad.State
+import Data.Bifunctor
+import Data.Bitraversable
 import Data.Map (Map)
+import Data.List
 import qualified Data.Map as Map
 
 import Scheme.Types
 import Scheme.References.Types
 import Scheme.References.Internal
-
-import Types hiding (name)
 
 data ReferenceScope = LocalScope
                     | FreeScope
@@ -96,17 +97,14 @@ defineSubScope _ action = do
   
 removeInnerScope :: ScopeM ()
 removeInnerScope = do
-  state <- get
+  ptr <- get
 
-  case state of
+  case ptr of
     Top _ -> throwError ScopeError
     (Inner _ parent) -> put parent
 
 addConstant :: Either Scope BasicValue -> ScopeM ConstReference
 addConstant ct = do
-  
-  inner <- gets innerScope
-
   ss <- gets innerScope
 
   let scps = ssConstants ss
@@ -136,7 +134,7 @@ requireVar varName = do
   where
     performOnParent :: (ScopePtr -> Maybe a) -> ScopePtr -> Maybe a
     performOnParent f (Inner _ parent) = f parent
-    performOnParent f (Top _) = Nothing
+    performOnParent _ (Top _) = Nothing
 
     foldUp :: (Alternative f) => (ScopePtr -> f ScopePtr)
            -> ScopePtr -> f ScopePtr
@@ -151,8 +149,8 @@ requireVar varName = do
       where
         localLookupAndTransform :: ScopePtr
                                 -> Maybe ScopePtr
-        localLookupAndTransform ptr = do
-          ref <- localLookup varN (innerScope ptr)
+        localLookupAndTransform ptr' = do
+          ref <- localLookup varN (innerScope ptr')
           case ref of
             LocalScope -> return (updateInnerScope markCellVar ptr)
             _ -> return ptr
@@ -172,3 +170,41 @@ requireVar varName = do
 -- resolveScopes :: FAST -> Either CompileError Scope
 -- resolveScopes = 
 
+
+data IndexedScope = IndexedScope
+  { ixsCode :: IndexedAST
+  , ixsConstants :: [Either IndexedScope BasicValue]
+  , ixsFree :: [String]
+  , ixsCell :: [String]
+  , ixsLocal :: [String]
+  }
+
+shrinkScope :: Scope -> IndexedScope
+shrinkScope (Scope code consts varTable) =
+  IndexedScope
+  { ixsCode = newCode
+  , ixsConstants = newConstants
+  , ixsFree = freeVars
+  , ixsCell = cellVars
+  , ixsLocal = localVars
+  }
+  where
+    freeVars = Map.keys (Map.filter (==FreeScope) varTable)
+    cellVars = Map.keys (Map.filter (==CellScope) varTable)
+    localVars = Map.keys (Map.filter (==LocalScope) varTable)
+    newConstants = first shrinkScope <$> consts
+    
+    (Just newCode) = bitraverse (lookReferences varTable) pure code
+
+    lookReferences :: Map String ReferenceScope
+                   -> String
+                   -> Maybe (MutableRef)
+    lookReferences varTable' key = do
+      varScope <- Map.lookup key varTable'
+      case varScope of
+        LocalScope ->
+          LocalVarReference <$> findIndex (==key) localVars
+        CellScope ->
+          CellVarReference <$> findIndex (==key) cellVars
+        FreeScope ->
+          FreeVarReference <$> findIndex (==key) freeVars

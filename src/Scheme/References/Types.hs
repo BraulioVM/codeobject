@@ -3,6 +3,7 @@
 module Scheme.References.Types (AReference,
                                 Reference,
                                 ConstReference,
+                                MutableRef,
                                 NReference,
                                 ReferenceType(..),
                                 getIndex,
@@ -33,3 +34,4 @@ getIndex (CellVarReference i) = i
 getIndex (GlobalVarReference i) = i
 
 type ConstReference = Reference 'ReadOnly
+type MutableRef = Reference 'Writable

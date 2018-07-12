@@ -111,7 +111,6 @@ type AST = AbstractProgram BasicValue
 type FAST = StandardForm 'Allowed String BasicValue
 
 type NamedAST = StandardForm 'NotAllowed String ConstReference
-
-
+type IndexedAST = StandardForm 'NotAllowed MutableRef ConstReference
 
 
