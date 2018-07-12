@@ -177,7 +177,7 @@ data IndexedScope = IndexedScope
   , ixsFree :: [String]
   , ixsCell :: [String]
   , ixsLocal :: [String]
-  }
+  } deriving (Show, Eq)
 
 shrinkScope :: Scope -> IndexedScope
 shrinkScope (Scope code consts varTable) =

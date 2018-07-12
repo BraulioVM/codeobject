@@ -11,8 +11,9 @@ import Scheme.AST
 
 testNestedLambdas :: Test
 testNestedLambdas = TestCase $ do
-  assertEqual "resolved program" (resolveReferences program) resolved
-
+  assertEqual "resolved program" (resolveReferences program)
+    (Right resolved)
+  assertEqual "shrink scope" (shrinkScope resolved) shrink
   where
     program :: FAST
     program =
@@ -28,7 +29,7 @@ testNestedLambdas = TestCase $ do
              ]
       )
 
-    resolved = Right
+    resolved =
       (Scope 
         { scopeCode = FAtom (ConstantVarReference 0)
         , scopeConstants =
@@ -77,6 +78,57 @@ testNestedLambdas = TestCase $ do
               }
             ]
         , scopeVars = Map.empty
+        }
+      )
+
+    shrink =
+      (IndexedScope 
+        { ixsCode = FAtom (ConstantVarReference 0)
+        , ixsConstants =
+            [ Left $ IndexedScope
+              { ixsCode =
+                  FBegin
+                  [ FDefine (CellVarReference 0)
+                    (FAtom $ ConstantVarReference 0)
+                  , FDefine (LocalVarReference 0)
+                    (FAtom $ ConstantVarReference 1)
+                  , FAtom (ConstantVarReference 2)
+                  ]
+              , ixsConstants =
+                [ Right (AInt 5)
+                , Right (AInt 6)
+                , Left $ IndexedScope
+                  { ixsCode =
+                      FBegin
+                      [ FDefine (CellVarReference 0)
+                        (FReference (FreeVarReference 0))
+                      , FAtom (ConstantVarReference 0)
+                      ]
+                  , ixsConstants =
+                    [
+                      Left $ IndexedScope
+                      { ixsCode =
+                          FDefine (LocalVarReference 0)
+                          (FReference (FreeVarReference 0))
+                      , ixsConstants = []
+                      , ixsFree = ["l"]
+                      , ixsLocal = ["y"]
+                      , ixsCell = []
+                      }
+                    ]
+                  , ixsFree = ["z"]
+                  , ixsCell = ["l"]
+                  , ixsLocal = []
+                  }
+                ]
+              , ixsFree = []
+              , ixsCell = ["z"]
+              , ixsLocal = ["local"]
+              }
+            ]
+        , ixsFree = []
+        , ixsLocal = []
+        , ixsCell = []
         }
       )
 
