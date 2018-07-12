@@ -105,6 +105,7 @@ data CompileError = ReservedWordSyntaxError
                   | UndefinedVariable String
                   | NotImplemented String
                   | ScopeError
+                  | A (String)
   deriving (Show, Eq)
 
 type AST = AbstractProgram BasicValue

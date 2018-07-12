@@ -60,7 +60,7 @@ getResolvedProgram (ScopeM act) = do
   fast <- eFast
 
   case ptr of
-    Inner _ _ -> throwError ScopeError
+    Inner _ _ -> throwError (A "get resolved program")
     Top ss -> 
       return $ Scope
       { scopeCode = fast
@@ -86,12 +86,12 @@ defineSubScope _ action = do
                              , ssConstants = [] })
   fast <- action
   inner <- gets innerScope
+
   let scope = Scope
         { scopeCode = fast
         , scopeConstants = ssConstants inner
         , scopeVars = ssTable inner
         }
-
   removeInnerScope
   addConstant (Left scope)
   
@@ -100,7 +100,7 @@ removeInnerScope = do
   ptr <- get
 
   case ptr of
-    Top _ -> throwError ScopeError
+    Top _ -> throwError (A "removeInnerScope")
     (Inner _ parent) -> put parent
 
 addConstant :: Either Scope BasicValue -> ScopeM ConstReference
@@ -127,7 +127,7 @@ requireVar varName = do
       case performOnParent (recursiveLookup' varName) scopePtr of
         Nothing -> throwError (UndefinedVariable varName)
         Just newPtr -> do
-          put newPtr
+          put (Inner (innerScope scopePtr) newPtr)
           localRegisterVar varName FreeScope
           return FreeScope
 
