@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 module Scheme.AST where
 
-
 import Control.Monad (forM)
 import Control.Monad.Except
 
