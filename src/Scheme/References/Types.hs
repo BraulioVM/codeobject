@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 module Scheme.References.Types (AReference,
                                 Reference,
+                                ConstReference,
                                 NReference,
                                 ReferenceType(..),
                                 getIndex,
@@ -29,3 +31,5 @@ getIndex (ConstantVarReference i) = i
 getIndex (FreeVarReference i) = i
 getIndex (CellVarReference i) = i
 getIndex (GlobalVarReference i) = i
+
+type ConstReference = Reference 'ReadOnly

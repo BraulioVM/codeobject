@@ -1,6 +1,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 module Scheme.Types where
 
 import Data.Bifoldable
@@ -21,19 +23,32 @@ data AbstractProgram a = Atom a
                        | ASymbol String
                        | List [AbstractProgram a]
 
-data StandardForm reference constant
-  = FAtom constant
-  | FReference reference
-  | FBegin [StandardForm reference constant]
-  | FDefine reference (StandardForm reference constant)
-  | FApply (StandardForm reference constant) [StandardForm reference constant]
-  | FLambda [reference] (StandardForm reference constant)
+data AllowedLambda = NotAllowed | Allowed
+
+data StandardForm (allowed :: AllowedLambda) reference constant where
+  FAtom :: constant -> StandardForm allowed reference constant
+  FReference :: reference -> StandardForm allowed reference constant
+
+  FBegin :: [StandardForm allowed reference constant]
+         -> StandardForm allowed reference constant
+  
+  FDefine :: reference
+          -> StandardForm allowed reference constant
+          -> StandardForm allowed reference constant
+
+  FApply :: StandardForm allowed reference constant
+         -> [StandardForm allowed reference constant]
+         -> StandardForm allowed reference constant
+
+  FLambda :: [reference]
+          -> StandardForm 'Allowed reference constant
+          -> StandardForm 'Allowed reference constant
 
 deriving instance (Show a) => Show (AbstractProgram a)
-deriving instance (Show ref, Show const) => Show (StandardForm ref const)
-deriving instance (Eq ref, Eq const) => Eq (StandardForm ref const)
+deriving instance (Show ref, Show const) => Show (StandardForm k ref const)
+deriving instance (Eq ref, Eq const) => Eq (StandardForm k ref const)
 
-instance Bifunctor StandardForm where
+instance Bifunctor (StandardForm a) where
   --first :: ref -> ref' -> (StandardForm ref a) -> (StandardForm ref' a)
   first _ (FAtom constant) = FAtom constant
   first f (FReference ref) = FReference (f ref)
@@ -53,7 +68,7 @@ instance Bifunctor StandardForm where
   second f (FLambda refs expr) =
     FLambda refs (second f expr)
 
-instance Bifoldable StandardForm where
+instance Bifoldable (StandardForm a) where
   bifoldMap _ g (FAtom constant) = g constant
   bifoldMap f _ (FReference ref) = f ref
   bifoldMap f g (FBegin exprs) =
@@ -70,7 +85,7 @@ instance Bifoldable StandardForm where
   bifoldMap f g (FLambda args expr) =
     mconcat (f <$> args) `mappend` bifoldMap f g expr
 
-instance Bitraversable StandardForm where
+instance Bitraversable (StandardForm a) where
   bitraverse _ g (FAtom constant) = FAtom <$> g constant
   bitraverse f _ (FReference ref) = FReference <$> f ref
   bitraverse f g (FBegin exprs) =
@@ -93,15 +108,9 @@ data CompileError = ReservedWordSyntaxError
   deriving (Show, Eq)
 
 type AST = AbstractProgram BasicValue
-type FAST = StandardForm String BasicValue
+type FAST = StandardForm 'Allowed String BasicValue
 
-type NRAST = StandardForm (NReference 'Writable) (Reference 'ReadOnly)
-type NamedAST = StandardForm String (Reference 'ReadOnly)
-
-type RAST = StandardForm (Reference 'Writable) (Reference 'ReadOnly)
-
-
-type ResolvedAST = AbstractProgram (Reference 'ReadOnly)
+type NamedAST = StandardForm 'NotAllowed String ConstReference
 
 
 
