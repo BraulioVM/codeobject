@@ -2,6 +2,7 @@ module Scheme.Operations where
 
 import Scheme.References.Types
 import Scheme.Types
+import Types
 
 data Operation = LoadVar MutableRef
                | SaveVar MutableRef
@@ -17,6 +18,6 @@ data CodeStruct = CodeStruct
                   , csFree :: [String]
                   , csCell :: [String]
                   , csLocal :: [String]
+                  , csArgumentNames :: [String]
                   }
 
-  

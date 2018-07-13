@@ -27,7 +27,8 @@ data ReferenceScope = LocalScope
 data Scope = Scope
   { scopeCode :: NamedAST
   , scopeConstants :: [Either Scope BasicValue]
-  , scopeVars :: Map String ReferenceScope    
+  , scopeVars :: Map String ReferenceScope
+  , scopeArgumentNames :: [String]
   } deriving (Show, Eq)
 
 data ScopeState = ScopeState
@@ -67,6 +68,7 @@ getResolvedProgram (ScopeM act) = do
       { scopeCode = fast
       , scopeConstants = ssConstants ss
       , scopeVars = ssTable ss
+      , scopeArgumentNames = []
       }
   
   where
@@ -82,9 +84,11 @@ localRegisterVar varName refScope = do
   modify (updateInnerScope (\s -> s { ssTable = newTable }))
 
 defineSubScope :: [String] -> ScopeM NamedAST -> ScopeM ConstReference
-defineSubScope _ action = do
-  modify (Inner $ ScopeState { ssTable = Map.empty
-                             , ssConstants = [] })
+defineSubScope argNames action = do
+  modify (Inner $ ScopeState
+           { ssTable = Map.fromList ((, LocalScope) <$> argNames)
+           , ssConstants = [] })
+
   fast <- action
   inner <- gets innerScope
 
@@ -92,6 +96,7 @@ defineSubScope _ action = do
         { scopeCode = fast
         , scopeConstants = ssConstants inner
         , scopeVars = ssTable inner
+        , scopeArgumentNames = argNames
         }
   removeInnerScope
   addConstant (Left scope)
@@ -178,16 +183,18 @@ data IndexedScope = IndexedScope
   , ixsFree :: [String]
   , ixsCell :: [String]
   , ixsLocal :: [String]
+  , ixsArgumentNames :: [String]
   } deriving (Show, Eq)
 
 shrinkScope :: Scope -> IndexedScope
-shrinkScope (Scope code consts varTable) =
+shrinkScope (Scope code consts varTable argumentNames) =
   IndexedScope
   { ixsCode = newCode
   , ixsConstants = newConstants
   , ixsFree = freeVars
   , ixsCell = cellVars
   , ixsLocal = localVars
+  , ixsArgumentNames = argumentNames
   }
   where
     freeVars = Map.keys (Map.filter (==FreeScope) varTable)
@@ -219,6 +226,7 @@ indexedScopeToCodeStruct iscope =
   , csFree = ixsFree iscope
   , csCell = ixsCell iscope
   , csLocal = ixsLocal iscope
+  , csArgumentNames = ixsArgumentNames iscope
   }
 
 toOperationList :: IndexedAST -> [Operation]
