@@ -2,7 +2,6 @@ module Scheme.Operations where
 
 import Scheme.References.Types
 import Scheme.Types
-import Types
 
 data Operation = LoadVar MutableRef
                | SaveVar MutableRef

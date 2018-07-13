@@ -20,10 +20,10 @@ testNestedLambdas = TestCase $ do
       FLambda ["x", "y"] (
       FBegin [ FDefine "z" (FAtom (AInt 5))
              , FDefine "local" (FAtom (AInt 6))
-             , FLambda ["_", "_"] (
+             , FLambda ["arg1", "arg2"] (
                  FBegin
                    [ FDefine "l" (FReference "z")
-                   , FLambda ["_", "_"] (FDefine "y" (FReference "l"))
+                   , FLambda ["arg3", "arg4"] (FDefine "y" (FReference "l"))
                    ]
                  )
              ]
@@ -60,24 +60,34 @@ testNestedLambdas = TestCase $ do
                           (FReference "l")
                       , scopeConstants = []
                       , scopeVars = Map.fromList
-                                    [ ("y", LocalScope)
+                                    [ ("arg3", LocalScope)
+                                    , ("arg4", LocalScope)
+                                    , ("y", LocalScope)
                                     , ("l", FreeScope)
                                     ]
+                      , scopeArgumentNames = ["arg3", "arg4"]
                       }
                     ]
                   , scopeVars = Map.fromList
-                                [ ("l", CellScope)
+                                [ ("arg1", LocalScope)
+                                , ("arg2", LocalScope)
+                                , ("l", CellScope)
                                 , ("z", FreeScope)
                                 ]
+                  , scopeArgumentNames = ["arg1", "arg2"]
                   }
                 ]
               , scopeVars = Map.fromList
-                            [ ("local", LocalScope)
+                            [ ("x", LocalScope)
+                            , ("y", LocalScope)
+                            , ("local", LocalScope)
                             , ("z", CellScope)
                             ]
+              , scopeArgumentNames = ["x", "y"]
               }
             ]
         , scopeVars = Map.empty
+        , scopeArgumentNames = []
         }
       )
 
@@ -108,27 +118,31 @@ testNestedLambdas = TestCase $ do
                     [
                       Left $ IndexedScope
                       { ixsCode =
-                          FDefine (LocalVarReference 0)
+                          FDefine (LocalVarReference 2)
                           (FReference (FreeVarReference 0))
                       , ixsConstants = []
                       , ixsFree = ["l"]
-                      , ixsLocal = ["y"]
+                      , ixsLocal = ["arg3", "arg4", "y"]
                       , ixsCell = []
+                      , ixsArgumentNames = ["arg3", "arg4"]
                       }
                     ]
                   , ixsFree = ["z"]
                   , ixsCell = ["l"]
-                  , ixsLocal = []
+                  , ixsLocal = ["arg1", "arg2"]
+                  , ixsArgumentNames = ["arg1", "arg2"]
                   }
                 ]
               , ixsFree = []
               , ixsCell = ["z"]
-              , ixsLocal = ["local"]
+              , ixsLocal = ["local", "x", "y"]
+              , ixsArgumentNames = ["x", "y"]
               }
             ]
         , ixsFree = []
         , ixsLocal = []
         , ixsCell = []
+        , ixsArgumentNames = []
         }
       )
 

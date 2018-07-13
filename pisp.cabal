@@ -28,7 +28,8 @@ library
                        Scheme.AST,
                        Scheme.References.Types,
                        Scheme.References.Internal,
-                       Scheme.CodeStruct
+                       Scheme.CodeStruct,
+                       Scheme.Operations
 
   build-depends:       base,
                        bytestring,
