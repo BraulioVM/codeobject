@@ -17,6 +17,7 @@ import qualified Data.Map as Map
 import Scheme.Types
 import Scheme.References.Types
 import Scheme.References.Internal
+import Scheme.Operations
 
 data ReferenceScope = LocalScope
                     | FreeScope
@@ -208,3 +209,41 @@ shrinkScope (Scope code consts varTable) =
           CellVarReference <$> findIndex (==key) cellVars
         FreeScope ->
           FreeVarReference <$> findIndex (==key) freeVars
+
+indexedScopeToCodeStruct :: IndexedScope -> CodeStruct
+indexedScopeToCodeStruct iscope =
+  CodeStruct
+  { csCode = toOperationList (ixsCode iscope)
+  , csConstants =
+      first indexedScopeToCodeStruct <$> (ixsConstants iscope)
+  , csFree = ixsFree iscope
+  , csCell = ixsCell iscope
+  , csLocal = ixsLocal iscope
+  }
+
+toOperationList :: IndexedAST -> [Operation]
+toOperationList (FAtom _) = []
+toOperationList (FReference _) = []
+toOperationList (FBegin exprs) =
+  concat (toOperationList <$> exprs)
+toOperationList (FDefine ref expr) =
+  putOnTop expr `mappend`
+  [ SaveVar ref ]
+toOperationList (FApply funcExpr arguments) =
+  concat (putOnTop <$> reverse arguments) `mappend`
+  putOnTop funcExpr `mappend`
+  [ CallFunction ]
+  
+
+putOnTop :: IndexedAST -> [Operation]
+putOnTop (FAtom constRef) = [LoadConst constRef]
+putOnTop (FReference mut) = [LoadVar mut]
+putOnTop def@(FDefine _ expr) =
+  toOperationList def `mappend`
+  putOnTop expr
+
+putOnTop (FBegin []) = []
+putOnTop (FBegin [x]) = putOnTop x
+putOnTop (FBegin (x:xs)) = toOperationList x `mappend`
+                           putOnTop (FBegin xs)
+putOnTop a@(FApply _ _) = toOperationList a
