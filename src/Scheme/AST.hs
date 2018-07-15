@@ -12,7 +12,7 @@ resolveReferences program =
   where
     trackReferences :: FAST -> ScopeM NamedAST
     trackReferences (FAtom x) = do
-      constRef <- addConstant (Right x)
+      constRef <- addBasicConstant x
       return (FAtom constRef)
       
     trackReferences (FReference str) = do
@@ -33,5 +33,5 @@ resolveReferences program =
         forM parameters trackReferences
       
     trackReferences (FLambda params code) = do
-      ref <- defineSubScope params (trackReferences code) 
-      return (FAtom ref)
+      (ident, freeVars) <- defineSubScope params (trackReferences code) 
+      return (FFuncRef ident freeVars)

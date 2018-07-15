@@ -31,7 +31,6 @@ getIndex (LocalVarReference i) = i
 getIndex (ConstantVarReference i) = i
 getIndex (FreeVarReference i) = i
 getIndex (CellVarReference i) = i
-getIndex (GlobalVarReference i) = i
 
 type ConstReference = Reference 'ReadOnly
 type MutableRef = Reference 'Writable

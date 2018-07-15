@@ -44,6 +44,10 @@ data StandardForm (allowed :: AllowedLambda) reference constant where
           -> StandardForm 'Allowed reference constant
           -> StandardForm 'Allowed reference constant
 
+  FFuncRef :: Int
+           -> [reference]
+           -> StandardForm 'NotAllowed reference constant
+
 deriving instance (Show a) => Show (AbstractProgram a)
 deriving instance (Show ref, Show const) => Show (StandardForm k ref const)
 deriving instance (Eq ref, Eq const) => Eq (StandardForm k ref const)
@@ -59,6 +63,8 @@ instance Bifunctor (StandardForm a) where
   first f (FLambda refs expr) =
     FLambda (f <$> refs) (first f expr)
 
+  first f (FFuncRef l refs) = FFuncRef l (f <$> refs)
+
   second f (FAtom constant) = FAtom (f constant)
   second _ (FReference ref) = FReference ref
   second f (FBegin exprs) = FBegin (second f <$> exprs)
@@ -67,6 +73,7 @@ instance Bifunctor (StandardForm a) where
     FApply (second f funcExpr) (second f <$> args)
   second f (FLambda refs expr) =
     FLambda refs (second f expr)
+  second _ (FFuncRef l refs) = FFuncRef l refs
 
 instance Bifoldable (StandardForm a) where
   bifoldMap _ g (FAtom constant) = g constant
@@ -85,6 +92,9 @@ instance Bifoldable (StandardForm a) where
   bifoldMap f g (FLambda args expr) =
     mconcat (f <$> args) `mappend` bifoldMap f g expr
 
+  bifoldMap f _ (FFuncRef _ refs) =
+    mconcat (f <$> refs)
+  
 instance Bitraversable (StandardForm a) where
   bitraverse _ g (FAtom constant) = FAtom <$> g constant
   bitraverse f _ (FReference ref) = FReference <$> f ref
@@ -97,7 +107,10 @@ instance Bitraversable (StandardForm a) where
     bitraverse f g funcExpr <*>
     sequenceA (bitraverse f g <$> args)
   bitraverse f g (FLambda refs expr) =
-    FLambda <$> sequenceA (f <$> refs) <*> bitraverse f g expr
+    FLambda <$> traverse f refs <*> bitraverse f g expr
+
+  bitraverse f _ (FFuncRef ident refs) =
+    FFuncRef ident <$> traverse f refs
 
 data CompileError = ReservedWordSyntaxError
                   | UnknownSyntax

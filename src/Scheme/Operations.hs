@@ -3,6 +3,8 @@ module Scheme.Operations where
 
 import qualified Data.ByteString as BS
 import qualified Data.Set as Set
+import Data.Bifunctor (first)
+import Data.Either (fromLeft)
 import Scheme.References.Internal
 import Scheme.References.Types
 import Scheme.Types
@@ -11,11 +13,12 @@ import qualified Operations as Op
 
 data Operation = LoadVar MutableRef
                | SaveVar MutableRef
+               | MakeClosure Int [MutableRef]
                | LoadConst ConstReference
                | BinaryAdd
                | Return
                | PrintExpr
-               | CallFunction 
+               | CallFunction Int
 
 data CodeStruct = CodeStruct
                   { csCode :: [Operation]
@@ -72,6 +75,18 @@ compileCS (CodeStruct code consts free cell local argNames) = CodeObject
 
     toPyByteCode (LoadConst (ConstantVarReference x)) =
       [Op.LOAD_CONST (fromIntegral x)]
-
     toPyByteCode Return =
       [Op.RETURN_VALUE]
+    toPyByteCode (MakeClosure ident refs) =
+      mappend ((Op.LOAD_CLOSURE . fromIntegral . getIndex) <$> refs) $
+      [ Op.BUILD_TUPLE (fromIntegral $ length refs)
+      , Op.LOAD_CONST (fromIntegral ident)
+      , Op.MAKE_CLOSURE $
+        fromIntegral $ 
+        fromLeft 0 $ first (length . csArgumentNames) (consts !! ident)
+      ]
+
+    toPyByteCode BinaryAdd = [Op.BINARY_ADD]
+    toPyByteCode PrintExpr = [Op.PRINT_EXPR]
+    toPyByteCode (CallFunction n) =
+      [ Op.CALL_FUNCTION $ fromIntegral n ]

@@ -34,6 +34,8 @@ data Operation = BINARY_ADD
                | COMPARE_OP ComparisonOperation
                | MAKE_FUNCTION Word16
                | CALL_FUNCTION Word16
+               | MAKE_CLOSURE Word16
+               | BUILD_TUPLE Word16
                deriving (Show)
   
 -- | Turn a string of bytecode instructions
@@ -73,6 +75,9 @@ opByteCode (COMPARE_OP cmp) = pack [107, cmp_code cmp, 0]
 
 opByteCode (MAKE_FUNCTION n) = opWithArgument 132 n
 opByteCode (CALL_FUNCTION n) = opWithArgument 131 n
+
+opByteCode (BUILD_TUPLE n) = opWithArgument 102 n
+opByteCode (MAKE_CLOSURE n) = opWithArgument 134 n
 
 opWithArgument :: Word8 -> Word16 -> ByteString
 opWithArgument op n = pack [op, lsb, msb]

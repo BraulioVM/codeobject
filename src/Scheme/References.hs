@@ -83,7 +83,7 @@ localRegisterVar varName refScope = do
   
   modify (updateInnerScope (\s -> s { ssTable = newTable }))
 
-defineSubScope :: [String] -> ScopeM NamedAST -> ScopeM ConstReference
+defineSubScope :: [String] -> ScopeM NamedAST -> ScopeM (Int, [String])
 defineSubScope argNames action = do
   modify (Inner $ ScopeState
            { ssTable = Map.fromList ((, LocalScope) <$> argNames)
@@ -98,8 +98,14 @@ defineSubScope argNames action = do
         , scopeVars = ssTable inner
         , scopeArgumentNames = argNames
         }
+
   removeInnerScope
-  addConstant (Left scope)
+
+  functionIdent <- addConstant (Left scope)
+  let cellVariables = Map.keys $ Map.filter (==FreeScope) (ssTable inner)
+  
+
+  return (functionIdent, cellVariables)
   
 removeInnerScope :: ScopeM ()
 removeInnerScope = do
@@ -109,7 +115,12 @@ removeInnerScope = do
     Top _ -> throwError (A "removeInnerScope")
     (Inner _ parent) -> put parent
 
-addConstant :: Either Scope BasicValue -> ScopeM ConstReference
+addBasicConstant :: BasicValue -> ScopeM ConstReference
+addBasicConstant bv = do
+  ident <- addConstant (Right bv)
+  return (ConstantVarReference ident)
+
+addConstant :: Either Scope BasicValue -> ScopeM Int
 addConstant ct = do
   ss <- gets innerScope
 
@@ -120,7 +131,7 @@ addConstant ct = do
   
   modify (updateInnerScope (const newSS))
 
-  return (ConstantVarReference newConstID)
+  return newConstID  
 
 requireVar :: String -> ScopeM ReferenceScope
 requireVar varName = do
@@ -173,9 +184,6 @@ requireVar varName = do
       let table = ssTable ss
       in Map.lookup varN table
 
--- resolveScopes :: FAST -> Either CompileError Scope
--- resolveScopes = 
-
 
 data IndexedScope = IndexedScope
   { ixsCode :: IndexedAST
@@ -207,7 +215,6 @@ shrinkScope (Scope code consts varTable argumentNames) =
       argumentNames ++ (Map.keys $
       Map.filterWithKey isRegularLocalVar varTable)
       
-
     notArgument :: String -> Bool
     notArgument = (`elem` argumentNames)
 
@@ -255,7 +262,10 @@ toOperationList (FDefine ref expr) =
 toOperationList (FApply funcExpr arguments) =
   concat (putOnTop <$> reverse arguments) `mappend`
   putOnTop funcExpr `mappend`
-  [ CallFunction ]
+  [ CallFunction $ length arguments ]
+  
+toOperationList (FFuncRef ident refs) =
+  [ MakeClosure ident refs ]
   
 
 putOnTop :: IndexedAST -> [Operation]
@@ -270,3 +280,4 @@ putOnTop (FBegin [x]) = putOnTop x
 putOnTop (FBegin (x:xs)) = toOperationList x `mappend`
                            putOnTop (FBegin xs)
 putOnTop a@(FApply _ _) = toOperationList a
+putOnTop a@(FFuncRef _ _) = toOperationList a

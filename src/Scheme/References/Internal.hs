@@ -9,7 +9,7 @@ data ReferenceType = Writable | ReadOnly
 
 data AReference index referenceType where
   LocalVarReference :: index -> AReference index 'Writable
-  GlobalVarReference :: index -> AReference index 'Writable
+  --GlobalVarReference :: index -> AReference index 'Writable
   CellVarReference :: index -> AReference index 'Writable
   FreeVarReference :: index -> AReference index 'Writable
   ConstantVarReference :: index -> AReference index 'ReadOnly

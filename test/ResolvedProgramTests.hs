@@ -31,7 +31,7 @@ testNestedLambdas = TestCase $ do
 
     resolved =
       (Scope 
-        { scopeCode = FAtom (ConstantVarReference 0)
+        { scopeCode = FFuncRef 0 []
         , scopeConstants =
             [ Left $ Scope
               { scopeCode =
@@ -40,7 +40,7 @@ testNestedLambdas = TestCase $ do
                     (FAtom $ ConstantVarReference 0)
                   , FDefine "local"
                     (FAtom $ ConstantVarReference 1)
-                  , FAtom (ConstantVarReference 2)
+                  , FFuncRef 2 ["z"]
                   ]
               , scopeConstants =
                 [ Right (AInt 5)
@@ -50,7 +50,7 @@ testNestedLambdas = TestCase $ do
                       FBegin
                       [ FDefine "l"
                         (FReference "z")
-                      , FAtom (ConstantVarReference 0)
+                      , FFuncRef 0 ["l"]
                       ]
                   , scopeConstants =
                     [
