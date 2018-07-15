@@ -1,6 +1,9 @@
+{-# LANGUAGE GADTs #-}
 module Scheme.Operations where
 
 import qualified Data.ByteString as BS
+import qualified Data.Set as Set
+import Scheme.References.Internal
 import Scheme.References.Types
 import Scheme.Types
 import Types
@@ -10,7 +13,7 @@ data Operation = LoadVar MutableRef
                | SaveVar MutableRef
                | LoadConst ConstReference
                | BinaryAdd
-               | ReturnValue
+               | Return
                | PrintExpr
                | CallFunction 
 
@@ -27,13 +30,13 @@ compileCS :: CodeStruct -> CodeObject
 compileCS (CodeStruct code consts free cell local argNames) = CodeObject
   { argCount = length argNames
   , kwOnlyArgCount = 0
-  , nLocals = length local + length cell
+  , nLocals = numberLocals
   , stackSize = computeStackSize code
   , flags = 0x40
-  , codeString = Op.getByteCode (toPyByteCode code)
-  , constants = undefined -- PTuple (toPyExpr <$> consts)
+  , codeString = Op.getByteCode (concatMap toPyByteCode code)
+  , constants = PTuple (getConstants <$> consts)
   , names = PTuple []
-  , varNames = theVarNames
+  , varNames = PTuple local
   , filename = ""
   , name = ""
   , firstLineNo = 0
@@ -44,8 +47,31 @@ compileCS (CodeStruct code consts free cell local argNames) = CodeObject
 
   where
     computeStackSize :: [Operation] -> Int
-    computeStackSize _ = 0
+    computeStackSize _ = 100
 
-    toPyByteCode = undefined
+    numberLocals :: Int
+    numberLocals = Set.size (Set.fromList $ local ++ argNames ++ cell)
+  
+    getConstants :: Either CodeStruct BasicValue -> PyExpr
+    getConstants (Left is) = toPyExpr (compileCS is)
+    getConstants (Right value) = toPyExpr (toPyExpr value)
 
-    theVarNames = undefined
+    toPyByteCode :: Operation -> [Op.Operation]
+    toPyByteCode (LoadVar (LocalVarReference x)) =
+      [Op.LOAD_FAST (fromIntegral x)]
+    toPyByteCode (LoadVar (CellVarReference x)) =
+      [Op.LOAD_CLOSURE (fromIntegral x)]
+    toPyByteCode (LoadVar (FreeVarReference x)) =
+      [Op.LOAD_CLOSURE (fromIntegral $ x + length cell)]
+    toPyByteCode (SaveVar (LocalVarReference x)) =
+      [Op.STORE_FAST (fromIntegral x)]
+    toPyByteCode (SaveVar (CellVarReference x)) =
+      [Op.STORE_DEREF (fromIntegral x)]
+    toPyByteCode (SaveVar (FreeVarReference x)) =
+      [Op.STORE_DEREF (fromIntegral $ x + length cell)]
+
+    toPyByteCode (LoadConst (ConstantVarReference x)) =
+      [Op.LOAD_CONST (fromIntegral x)]
+
+    toPyByteCode Return =
+      [Op.RETURN_VALUE]

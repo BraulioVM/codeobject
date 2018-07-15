@@ -24,6 +24,8 @@ data Operation = BINARY_ADD
                | STORE_FAST Word16
                | LOAD_CONST Word16
                | LOAD_GLOBAL Word16
+               | LOAD_CLOSURE Word16
+               | STORE_DEREF Word16
                | PRINT_EXPR
                | RETURN_VALUE
                | JUMP_FORWARD Word16
@@ -47,7 +49,8 @@ opByteCode (LOAD_FAST n) = opWithArgument 124 n
 opByteCode (STORE_FAST n) = opWithArgument 125 n
 opByteCode (LOAD_CONST n) = opWithArgument 100 n
 opByteCode (LOAD_GLOBAL n) = opWithArgument 116 n
-
+opByteCode (LOAD_CLOSURE n) = opWithArgument 135 n
+opByteCode (STORE_DEREF n) = opWithArgument 137 n
 opByteCode RETURN_VALUE = singleton 83
 opByteCode PRINT_EXPR = singleton 70
 

@@ -186,6 +186,10 @@ data IndexedScope = IndexedScope
   , ixsArgumentNames :: [String]
   } deriving (Show, Eq)
 
+-- | Resolve variable names in the code to index numbers.
+-- One has to be careful with arguments, which must have the
+-- first numbers in the `varnames` list, even if they are cell
+-- variables.
 shrinkScope :: Scope -> IndexedScope
 shrinkScope (Scope code consts varTable argumentNames) =
   IndexedScope
@@ -199,7 +203,18 @@ shrinkScope (Scope code consts varTable argumentNames) =
   where
     freeVars = Map.keys (Map.filter (==FreeScope) varTable)
     cellVars = Map.keys (Map.filter (==CellScope) varTable)
-    localVars = Map.keys (Map.filter (==LocalScope) varTable)
+    localVars =
+      argumentNames ++ (Map.keys $
+      Map.filterWithKey isRegularLocalVar varTable)
+      
+
+    notArgument :: String -> Bool
+    notArgument = (`elem` argumentNames)
+
+    isRegularLocalVar :: String -> ReferenceScope -> Bool
+    isRegularLocalVar s scope =
+      scope == LocalScope && notArgument s
+    
     newConstants = first shrinkScope <$> consts
     
     (Just newCode) = bitraverse (lookReferences varTable) pure code
